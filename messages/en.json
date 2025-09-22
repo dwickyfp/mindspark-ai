@@ -390,6 +390,11 @@
     "sharedMcpServers": "Shared MCP Servers",
     "noPersonalMcpServers": "You don't have any personal MCP servers available to share.",
     "mcpServerSharedDescription": "Shared with all members of this organization.",
+    "sharedAgents": "Shared Agents",
+    "noPersonalAgents": "You don't have any personal agents available to share.",
+    "agentSharedDescription": "Shared with all members of this organization.",
+    "sharedWithOrganization": "Shared",
+    "agentsSharedUpdated": "Shared agents updated",
     "mcpSharesUpdated": "Shared MCP servers updated",
     "usageAnalytics": "Usage Analytics",
     "totalTokens": "Total Tokens",
@@ -456,7 +461,10 @@
     "public": "Public",
     "privateDescription": "Only you can view, edit, and use this agent.",
     "readOnlyDescription": "Others can view and use as a tool, but only you can edit.",
-    "publicDescription": "Anyone can view, edit, and use this agent as a tool."
+    "publicDescription": "Anyone can view, edit, and use this agent as a tool.",
+    "sharedFromOrganization": "Shared by {organization}",
+    "sharedWithSingleOrganization": "Shared with {organization}",
+    "sharedWithMultipleOrganizations": "Shared with {count} organizations"
   },
   "KeyboardShortcuts": {
     "title": "Keyboard Shortcuts",

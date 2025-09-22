@@ -18,6 +18,7 @@ export type OrganizationDetailResponse = {
   };
   members: OrganizationMemberWithUser[];
   sharedMcpServerIds: string[];
+  sharedAgentIds: string[];
 };
 
 export function useOrganizationDetail(

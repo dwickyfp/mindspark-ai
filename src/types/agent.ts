@@ -66,6 +66,15 @@ export type AgentSummary = {
   userName?: string;
   userAvatar?: string;
   isBookmarked?: boolean;
+  sharedOrganizations?: AgentOrganizationShare[];
+  scope?: "personal" | "organization" | "public" | "readonly";
+  organizationId?: string;
+  organizationName?: string;
+};
+
+export type AgentOrganizationShare = {
+  id: string;
+  name: string;
 };
 
 export type Agent = AgentSummary & {

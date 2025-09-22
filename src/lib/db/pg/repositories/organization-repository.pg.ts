@@ -2,6 +2,7 @@ import { pgDb as db } from "../db.pg";
 import {
   OrganizationMemberSchema,
   OrganizationMcpServerSchema,
+  OrganizationAgentSchema,
   OrganizationSchema,
   UserSchema,
 } from "../schema.pg";
@@ -347,6 +348,92 @@ export const pgOrganizationRepository: OrganizationRepository = {
         and(
           eq(OrganizationMcpServerSchema.organizationId, organizationId),
           eq(OrganizationMcpServerSchema.mcpServerId, serverId),
+        ),
+      );
+    await db
+      .update(OrganizationSchema)
+      .set({ updatedAt: sql`CURRENT_TIMESTAMP` })
+      .where(eq(OrganizationSchema.id, organizationId));
+  },
+
+  async listSharedAgentIds(organizationId) {
+    const rows = await db
+      .select({ agentId: OrganizationAgentSchema.agentId })
+      .from(OrganizationAgentSchema)
+      .where(eq(OrganizationAgentSchema.organizationId, organizationId));
+    return rows.map((row) => row.agentId);
+  },
+
+  async setSharedAgentIds(organizationId, agentIds) {
+    await db.transaction(async (tx) => {
+      const existing = await tx
+        .select({ agentId: OrganizationAgentSchema.agentId })
+        .from(OrganizationAgentSchema)
+        .where(eq(OrganizationAgentSchema.organizationId, organizationId));
+
+      const existingIds = new Set(existing.map((row) => row.agentId));
+      const targetIds = new Set(agentIds);
+
+      const toInsert = agentIds.filter((id) => !existingIds.has(id));
+      const toDelete = existing
+        .map((row) => row.agentId)
+        .filter((id) => !targetIds.has(id));
+
+      if (toDelete.length > 0) {
+        await tx
+          .delete(OrganizationAgentSchema)
+          .where(
+            and(
+              eq(OrganizationAgentSchema.organizationId, organizationId),
+              inArray(OrganizationAgentSchema.agentId, toDelete),
+            ),
+          );
+      }
+
+      if (toInsert.length > 0) {
+        await tx
+          .insert(OrganizationAgentSchema)
+          .values(
+            toInsert.map((agentId) => ({
+              id: generateUUID(),
+              organizationId,
+              agentId,
+              createdAt: new Date(),
+            })),
+          )
+          .onConflictDoNothing();
+      }
+
+      await tx
+        .update(OrganizationSchema)
+        .set({ updatedAt: sql`CURRENT_TIMESTAMP` })
+        .where(eq(OrganizationSchema.id, organizationId));
+    });
+  },
+
+  async addSharedAgent(organizationId, agentId) {
+    await db
+      .insert(OrganizationAgentSchema)
+      .values({
+        id: generateUUID(),
+        organizationId,
+        agentId,
+        createdAt: new Date(),
+      })
+      .onConflictDoNothing();
+    await db
+      .update(OrganizationSchema)
+      .set({ updatedAt: sql`CURRENT_TIMESTAMP` })
+      .where(eq(OrganizationSchema.id, organizationId));
+  },
+
+  async removeSharedAgent(organizationId, agentId) {
+    await db
+      .delete(OrganizationAgentSchema)
+      .where(
+        and(
+          eq(OrganizationAgentSchema.organizationId, organizationId),
+          eq(OrganizationAgentSchema.agentId, agentId),
         ),
       );
     await db

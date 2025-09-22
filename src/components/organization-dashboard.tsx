@@ -12,6 +12,7 @@ import { useOrganizations } from "@/hooks/queries/use-organizations";
 import { useOrganizationDetail } from "@/hooks/queries/use-organization-detail";
 import { useOrganizationAnalytics } from "@/hooks/queries/use-organization-analytics";
 import { useMcpList } from "@/hooks/queries/use-mcp-list";
+import { useAgents } from "@/hooks/queries/use-agents";
 import { fetcher } from "lib/utils";
 import { handleErrorWithToast } from "ui/shared-toast";
 
@@ -43,6 +44,7 @@ import { cn } from "lib/utils";
 import { Trash2, XIcon } from "lucide-react";
 import { deleteOrganizationAction } from "@/app/api/organization/[organizationId]/actions";
 import { notify } from "lib/notify";
+import { Avatar, AvatarFallback, AvatarImage } from "ui/avatar";
 
 const ROLE_OPTIONS: OrganizationRole[] = ["member", "admin"];
 
@@ -96,6 +98,10 @@ export default function OrganizationDashboard() {
     });
 
   const { data: mcpServers } = useMcpList({ revalidateOnFocus: false });
+  const { myAgents: personalAgents, isLoading: isAgentsLoading } = useAgents({
+    filters: ["mine"],
+    revalidateOnFocus: false,
+  });
 
   const [newOrganizationName, setNewOrganizationName] = useState("");
   const [isCreatingOrganization, setIsCreatingOrganization] = useState(false);
@@ -106,7 +112,9 @@ export default function OrganizationDashboard() {
   const [isInviting, setIsInviting] = useState(false);
 
   const [sharedServerIds, setSharedServerIds] = useState<string[]>([]);
-  const [isUpdatingShares, setIsUpdatingShares] = useState(false);
+  const [isUpdatingMcpShares, setIsUpdatingMcpShares] = useState(false);
+  const [sharedAgentIds, setSharedAgentIds] = useState<string[]>([]);
+  const [isUpdatingAgentShares, setIsUpdatingAgentShares] = useState(false);
 
   useEffect(() => {
     if (organizationDetail?.sharedMcpServerIds) {
@@ -115,6 +123,14 @@ export default function OrganizationDashboard() {
       setSharedServerIds([]);
     }
   }, [organizationDetail?.sharedMcpServerIds]);
+
+  useEffect(() => {
+    if (organizationDetail?.sharedAgentIds) {
+      setSharedAgentIds(organizationDetail.sharedAgentIds);
+    } else {
+      setSharedAgentIds([]);
+    }
+  }, [organizationDetail?.sharedAgentIds]);
 
   const canManageMembers = useMemo(() => {
     const role = organizationDetail?.membership.role;
@@ -194,7 +210,7 @@ export default function OrganizationDashboard() {
       : sharedServerIds.filter((id) => id !== serverId);
 
     setSharedServerIds(next);
-    setIsUpdatingShares(true);
+    setIsUpdatingMcpShares(true);
     try {
       await fetcher(`/api/organization/${selectedOrganizationId}/mcp`, {
         method: "PUT",
@@ -206,7 +222,31 @@ export default function OrganizationDashboard() {
       handleErrorWithToast(toError(error));
       setSharedServerIds(previous);
     } finally {
-      setIsUpdatingShares(false);
+      setIsUpdatingMcpShares(false);
+    }
+  };
+
+  const handleToggleAgentShare = async (agentId: string, checked: boolean) => {
+    if (!selectedOrganizationId) return;
+    const previous = sharedAgentIds;
+    const next = checked
+      ? Array.from(new Set([...sharedAgentIds, agentId]))
+      : sharedAgentIds.filter((id) => id !== agentId);
+
+    setSharedAgentIds(next);
+    setIsUpdatingAgentShares(true);
+    try {
+      await fetcher(`/api/organization/${selectedOrganizationId}/agents`, {
+        method: "PUT",
+        body: JSON.stringify({ agentIds: next }),
+      });
+      await mutateOrganizationDetail();
+      toast.success(t("agentsSharedUpdated"));
+    } catch (error) {
+      handleErrorWithToast(toError(error));
+      setSharedAgentIds(previous);
+    } finally {
+      setIsUpdatingAgentShares(false);
     }
   };
 
@@ -497,7 +537,7 @@ export default function OrganizationDashboard() {
                             <Checkbox
                               id={`mcp-${server.id}`}
                               checked={checked}
-                              disabled={isUpdatingShares}
+                              disabled={isUpdatingMcpShares}
                               onCheckedChange={(value) =>
                                 handleToggleShare(server.id, value === true)
                               }
@@ -512,6 +552,73 @@ export default function OrganizationDashboard() {
                               <p className="text-xs text-muted-foreground">
                                 {t("mcpServerSharedDescription")}
                               </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t("sharedAgents")}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {isAgentsLoading ? (
+                    <div className="space-y-2">
+                      {[...Array(2)].map((_, index) => (
+                        <Skeleton key={index} className="h-16 w-full" />
+                      ))}
+                    </div>
+                  ) : personalAgents.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t("noPersonalAgents")}
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {personalAgents.map((agent) => {
+                        const checked = sharedAgentIds.includes(agent.id);
+                        return (
+                          <div
+                            key={agent.id}
+                            className={cn(
+                              "flex items-start gap-3 rounded-md border p-3",
+                              checked && "border-primary/60 bg-primary/5",
+                            )}
+                          >
+                            <Checkbox
+                              id={`agent-${agent.id}`}
+                              checked={checked}
+                              disabled={isUpdatingAgentShares}
+                              onCheckedChange={(value) =>
+                                handleToggleAgentShare(agent.id, value === true)
+                              }
+                            />
+                            <div className="flex w-full items-start gap-3">
+                              <Avatar className="size-9">
+                                <AvatarImage src={agent.icon?.value} />
+                                <AvatarFallback>
+                                  {agent.name[0]?.toUpperCase() || "A"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 space-y-1">
+                                <Label
+                                  htmlFor={`agent-${agent.id}`}
+                                  className="cursor-pointer"
+                                >
+                                  {agent.name}
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                  {t("agentSharedDescription")}
+                                </p>
+                              </div>
+                              {checked ? (
+                                <Badge variant="secondary" className="shrink-0">
+                                  {t("sharedWithOrganization")}
+                                </Badge>
+                              ) : null}
                             </div>
                           </div>
                         );

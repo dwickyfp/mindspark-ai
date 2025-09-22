@@ -1,7 +1,14 @@
 import { Agent, AgentRepository, AgentSummary } from "app-types/agent";
 import { pgDb as db } from "../db.pg";
-import { AgentSchema, BookmarkSchema, UserSchema } from "../schema.pg";
-import { and, desc, eq, ne, or, sql } from "drizzle-orm";
+import {
+  AgentSchema,
+  BookmarkSchema,
+  OrganizationAgentSchema,
+  OrganizationMemberSchema,
+  OrganizationSchema,
+  UserSchema,
+} from "../schema.pg";
+import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { generateUUID } from "lib/utils";
 
 export const pgAgentRepository: AgentRepository = {
@@ -26,11 +33,13 @@ export const pgAgentRepository: AgentRepository = {
       description: result.description ?? undefined,
       icon: result.icon ?? undefined,
       instructions: result.instructions ?? {},
+      sharedOrganizations: [],
+      scope: "personal",
     };
   },
 
   async selectAgentById(id, userId): Promise<Agent | null> {
-    const [result] = await db
+    const [agent] = await db
       .select({
         id: AgentSchema.id,
         name: AgentSchema.name,
@@ -52,25 +61,72 @@ export const pgAgentRepository: AgentRepository = {
           eq(BookmarkSchema.itemType, "agent"),
         ),
       )
-      .where(
-        and(
-          eq(AgentSchema.id, id),
-          or(
-            eq(AgentSchema.userId, userId), // Own agent
-            eq(AgentSchema.visibility, "public"), // Public agent
-            eq(AgentSchema.visibility, "readonly"), // Readonly agent
-          ),
-        ),
-      );
+      .where(eq(AgentSchema.id, id));
 
-    if (!result) return null;
+    if (!agent) return null;
+
+    const isOwner = agent.userId === userId;
+    const hasVisibilityAccess =
+      agent.visibility === "public" || agent.visibility === "readonly";
+
+    const sharedOrgRows = await db
+      .select({
+        organizationId: OrganizationAgentSchema.organizationId,
+        organizationName: OrganizationSchema.name,
+        isMember: sql<boolean>`CASE WHEN ${OrganizationMemberSchema.id} IS NOT NULL THEN true ELSE false END`,
+      })
+      .from(OrganizationAgentSchema)
+      .innerJoin(
+        OrganizationSchema,
+        eq(OrganizationAgentSchema.organizationId, OrganizationSchema.id),
+      )
+      .leftJoin(
+        OrganizationMemberSchema,
+        and(
+          eq(
+            OrganizationMemberSchema.organizationId,
+            OrganizationAgentSchema.organizationId,
+          ),
+          eq(OrganizationMemberSchema.userId, userId),
+        ),
+      )
+      .where(eq(OrganizationAgentSchema.agentId, id));
+
+    const hasOrgAccess = sharedOrgRows.some((row) => row.isMember);
+
+    if (!isOwner && !hasVisibilityAccess && !hasOrgAccess) {
+      return null;
+    }
+
+    const sharedOrganizations = sharedOrgRows
+      .filter((row) => row.isMember || isOwner)
+      .map((row) => ({
+        id: row.organizationId,
+        name: row.organizationName,
+      }));
+
+    const primaryOrg = sharedOrgRows.find((row) => row.isMember);
+
+    const scope: Agent["scope"] = isOwner
+      ? "personal"
+      : hasOrgAccess
+        ? "organization"
+        : agent.visibility === "public"
+          ? "public"
+          : agent.visibility === "readonly"
+            ? "readonly"
+            : "personal";
 
     return {
-      ...result,
-      description: result.description ?? undefined,
-      icon: result.icon ?? undefined,
-      instructions: result.instructions ?? {},
-      isBookmarked: result.isBookmarked ?? false,
+      ...agent,
+      description: agent.description ?? undefined,
+      icon: agent.icon ?? undefined,
+      instructions: agent.instructions ?? {},
+      isBookmarked: agent.isBookmarked ?? false,
+      sharedOrganizations,
+      scope,
+      organizationId: primaryOrg?.organizationId,
+      organizationName: primaryOrg?.organizationName,
     };
   },
 
@@ -95,6 +151,32 @@ export const pgAgentRepository: AgentRepository = {
       .where(eq(AgentSchema.userId, userId))
       .orderBy(desc(AgentSchema.createdAt));
 
+    const agentIds = results.map((result) => result.id);
+    const allShareMap = new Map<string, { id: string; name: string }[]>();
+
+    if (agentIds.length > 0) {
+      const allShareRows = await db
+        .select({
+          agentId: OrganizationAgentSchema.agentId,
+          organizationId: OrganizationAgentSchema.organizationId,
+          organizationName: OrganizationSchema.name,
+        })
+        .from(OrganizationAgentSchema)
+        .innerJoin(
+          OrganizationSchema,
+          eq(OrganizationAgentSchema.organizationId, OrganizationSchema.id),
+        )
+        .where(inArray(OrganizationAgentSchema.agentId, agentIds));
+
+      allShareRows.forEach((row) => {
+        const existing = allShareMap.get(row.agentId) ?? [];
+        if (!existing.some((org) => org.id === row.organizationId)) {
+          existing.push({ id: row.organizationId, name: row.organizationName });
+          allShareMap.set(row.agentId, existing);
+        }
+      });
+    }
+
     // Map database nulls to undefined and set defaults for owned agents
     return results.map((result) => ({
       ...result,
@@ -104,6 +186,8 @@ export const pgAgentRepository: AgentRepository = {
       userName: result.userName ?? undefined,
       userAvatar: result.userAvatar ?? undefined,
       isBookmarked: false, // Always false for owned agents
+      sharedOrganizations: allShareMap.get(result.id) ?? [],
+      scope: "personal",
     }));
   },
 
@@ -131,6 +215,8 @@ export const pgAgentRepository: AgentRepository = {
       description: result.description ?? undefined,
       icon: result.icon ?? undefined,
       instructions: result.instructions ?? {},
+      sharedOrganizations: [],
+      scope: result.userId === userId ? "personal" : undefined,
     };
   },
 
@@ -145,51 +231,83 @@ export const pgAgentRepository: AgentRepository = {
     filters = ["all"],
     limit = 50,
   ): Promise<AgentSummary[]> {
+    const accessibleOrgShares = await db
+      .select({
+        agentId: OrganizationAgentSchema.agentId,
+        organizationId: OrganizationAgentSchema.organizationId,
+        organizationName: OrganizationSchema.name,
+      })
+      .from(OrganizationMemberSchema)
+      .innerJoin(
+        OrganizationAgentSchema,
+        eq(
+          OrganizationMemberSchema.organizationId,
+          OrganizationAgentSchema.organizationId,
+        ),
+      )
+      .innerJoin(
+        OrganizationSchema,
+        eq(OrganizationAgentSchema.organizationId, OrganizationSchema.id),
+      )
+      .where(eq(OrganizationMemberSchema.userId, currentUserId));
+
+    const accessibleOrgAgentMap = new Map<
+      string,
+      { id: string; name: string }[]
+    >();
+    accessibleOrgShares.forEach((row) => {
+      const existing = accessibleOrgAgentMap.get(row.agentId) ?? [];
+      if (!existing.some((org) => org.id === row.organizationId)) {
+        existing.push({ id: row.organizationId, name: row.organizationName });
+        accessibleOrgAgentMap.set(row.agentId, existing);
+      }
+    });
+
+    const ownedCondition = eq(AgentSchema.userId, currentUserId);
+    const sharedVisibilityCondition = or(
+      eq(AgentSchema.visibility, "public"),
+      eq(AgentSchema.visibility, "readonly"),
+    );
+
+    const sharedOrgCondition = sql<boolean>`EXISTS (
+      SELECT 1
+      FROM ${OrganizationAgentSchema}
+      INNER JOIN ${OrganizationMemberSchema}
+        ON ${OrganizationAgentSchema.organizationId} = ${OrganizationMemberSchema.organizationId}
+      WHERE ${OrganizationAgentSchema.agentId} = ${AgentSchema.id}
+        AND ${OrganizationMemberSchema.userId} = ${currentUserId}
+    )`;
+
+    const accessibleCondition = or(sharedVisibilityCondition, sharedOrgCondition);
+
+    const sharedCondition = and(
+      ne(AgentSchema.userId, currentUserId),
+      accessibleCondition,
+    );
+
+    const bookmarkedCondition = and(
+      ne(AgentSchema.userId, currentUserId),
+      accessibleCondition,
+      sql`${BookmarkSchema.id} IS NOT NULL`,
+    );
+
     let orConditions: any[] = [];
 
-    // Build OR conditions based on filters array
     for (const filter of filters) {
       if (filter === "mine") {
-        orConditions.push(eq(AgentSchema.userId, currentUserId));
+        orConditions.push(ownedCondition);
       } else if (filter === "shared") {
-        orConditions.push(
-          and(
-            ne(AgentSchema.userId, currentUserId),
-            or(
-              eq(AgentSchema.visibility, "public"),
-              eq(AgentSchema.visibility, "readonly"),
-            ),
-          ),
-        );
+        orConditions.push(sharedCondition);
       } else if (filter === "bookmarked") {
-        orConditions.push(
-          and(
-            ne(AgentSchema.userId, currentUserId),
-            or(
-              eq(AgentSchema.visibility, "public"),
-              eq(AgentSchema.visibility, "readonly"),
-            ),
-            sql`${BookmarkSchema.id} IS NOT NULL`,
-          ),
-        );
+        orConditions.push(bookmarkedCondition);
       } else if (filter === "all") {
-        // All available agents (mine + shared) - this overrides other filters
-        orConditions = [
-          or(
-            // My agents
-            eq(AgentSchema.userId, currentUserId),
-            // Shared agents
-            and(
-              ne(AgentSchema.userId, currentUserId),
-              or(
-                eq(AgentSchema.visibility, "public"),
-                eq(AgentSchema.visibility, "readonly"),
-              ),
-            ),
-          ),
-        ];
-        break; // "all" overrides everything else
+        orConditions = [or(ownedCondition, sharedCondition)];
+        break;
       }
+    }
+
+    if (orConditions.length === 0) {
+      orConditions = [or(ownedCondition, sharedCondition)];
     }
 
     const results = await db
@@ -225,6 +343,33 @@ export const pgAgentRepository: AgentRepository = {
       )
       .limit(limit);
 
+    const agentIds = results.map((result) => result.id);
+
+    const allShareMap = new Map<string, { id: string; name: string }[]>();
+
+    if (agentIds.length > 0) {
+      const allShareRows = await db
+        .select({
+          agentId: OrganizationAgentSchema.agentId,
+          organizationId: OrganizationAgentSchema.organizationId,
+          organizationName: OrganizationSchema.name,
+        })
+        .from(OrganizationAgentSchema)
+        .innerJoin(
+          OrganizationSchema,
+          eq(OrganizationAgentSchema.organizationId, OrganizationSchema.id),
+        )
+        .where(inArray(OrganizationAgentSchema.agentId, agentIds));
+
+      allShareRows.forEach((row) => {
+        const existing = allShareMap.get(row.agentId) ?? [];
+        if (!existing.some((org) => org.id === row.organizationId)) {
+          existing.push({ id: row.organizationId, name: row.organizationName });
+          allShareMap.set(row.agentId, existing);
+        }
+      });
+    }
+
     // Map database nulls to undefined
     return results.map((result) => ({
       ...result,
@@ -232,6 +377,28 @@ export const pgAgentRepository: AgentRepository = {
       icon: result.icon ?? undefined,
       userName: result.userName ?? undefined,
       userAvatar: result.userAvatar ?? undefined,
+      sharedOrganizations:
+        (result.userId === currentUserId
+          ? allShareMap.get(result.id)
+          : accessibleOrgAgentMap.get(result.id)) ?? [],
+      scope:
+        result.userId === currentUserId
+          ? "personal"
+          : accessibleOrgAgentMap.has(result.id)
+            ? "organization"
+            : result.visibility === "public"
+              ? "public"
+              : result.visibility === "readonly"
+                ? "readonly"
+                : "personal",
+      organizationId:
+        result.userId === currentUserId
+          ? undefined
+          : accessibleOrgAgentMap.get(result.id)?.[0]?.id,
+      organizationName:
+        result.userId === currentUserId
+          ? undefined
+          : accessibleOrgAgentMap.get(result.id)?.[0]?.name,
     }));
   },
 
@@ -247,7 +414,31 @@ export const pgAgentRepository: AgentRepository = {
       return false;
     }
     if (userId == agent.userId) return true;
-    if (agent.visibility === "public" && !destructive) return true;
+    if (!destructive) {
+      if (agent.visibility === "public" || agent.visibility === "readonly") {
+        return true;
+      }
+
+      const [orgAccess] = await db
+        .select({ exists: OrganizationAgentSchema.id })
+        .from(OrganizationAgentSchema)
+        .innerJoin(
+          OrganizationMemberSchema,
+          and(
+            eq(
+              OrganizationAgentSchema.organizationId,
+              OrganizationMemberSchema.organizationId,
+            ),
+            eq(OrganizationMemberSchema.userId, userId),
+          ),
+        )
+        .where(eq(OrganizationAgentSchema.agentId, agentId))
+        .limit(1);
+
+      if (orgAccess) {
+        return true;
+      }
+    }
     return false;
   },
 };

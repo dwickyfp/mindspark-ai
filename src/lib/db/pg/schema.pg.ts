@@ -225,6 +225,27 @@ export const OrganizationMcpServerSchema = pgTable(
   ],
 );
 
+export const OrganizationAgentSchema = pgTable(
+  "organization_agent",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => OrganizationSchema.id, { onDelete: "cascade" }),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => AgentSchema.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    unique("organization_agent_unique").on(table.organizationId, table.agentId),
+    index("organization_agent_org_idx").on(table.organizationId),
+    index("organization_agent_agent_idx").on(table.agentId),
+  ],
+);
+
 export const ModelUsageLogSchema = pgTable(
   "model_usage_log",
   {

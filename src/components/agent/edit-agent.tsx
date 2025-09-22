@@ -41,6 +41,7 @@ import {
   WeatherExample,
 } from "lib/ai/agent/example";
 import { notify } from "lib/notify";
+import { Badge } from "ui/badge";
 
 const defaultConfig = (): PartialBy<
   Omit<Agent, "createdAt" | "updatedAt" | "userId">,
@@ -312,6 +313,30 @@ export default function EditAgent({
   ]);
 
   const isGenerating = openGenerateAgentDialog;
+  const sharedOrganizations = agent.sharedOrganizations ?? [];
+  const organizationBadge = initialAgent
+    ? !isOwner && initialAgent.organizationName
+      ? (
+          <Badge variant="outline" className="uppercase text-[10px]">
+            {t("Agent.sharedFromOrganization", {
+              organization: initialAgent.organizationName,
+            })}
+          </Badge>
+        )
+      : isOwner && sharedOrganizations.length > 0
+        ? (
+            <Badge variant="outline" className="uppercase text-[10px]">
+              {sharedOrganizations.length === 1
+                ? t("Agent.sharedWithSingleOrganization", {
+                    organization: sharedOrganizations[0]?.name ?? "",
+                  })
+                : t("Agent.sharedWithMultipleOrganizations", {
+                    count: sharedOrganizations.length,
+                  })}
+            </Badge>
+          )
+        : null
+    : null;
 
   return (
     <ScrollArea className="h-full w-full relative">
@@ -387,6 +412,7 @@ export default function EditAgent({
                   onBookmarkToggle={handleBookmarkToggle}
                   isBookmarkToggleLoading={isBookmarkToggleLoading}
                 />
+                {organizationBadge}
               </div>
             )}
           </div>

@@ -16,6 +16,7 @@ import { ShareableActions, type Visibility } from "./shareable-actions";
 import { WorkflowSummary } from "app-types/workflow";
 import { AgentSummary } from "app-types/agent";
 import Link from "next/link";
+import { Badge } from "ui/badge";
 
 export interface ShareableIcon {
   value?: string;
@@ -53,6 +54,33 @@ export function ShareableCard({
   const t = useTranslations();
   const isPublished = (item as WorkflowSummary).isPublished;
   const isBookmarked = (item as AgentSummary).isBookmarked;
+  const agentItem = type === "agent" ? (item as AgentSummary) : undefined;
+  const sharedOrgCount = agentItem?.sharedOrganizations?.length ?? 0;
+
+  const organizationBadge = agentItem
+    ? !isOwner && agentItem.scope === "organization" && agentItem.organizationName
+      ? (
+          <Badge variant="outline" className="text-[10px] uppercase">
+            {t("Agent.sharedFromOrganization", {
+              organization: agentItem.organizationName,
+            })}
+          </Badge>
+        )
+      : isOwner && sharedOrgCount > 0
+        ? (
+            <Badge variant="outline" className="text-[10px] uppercase">
+              {sharedOrgCount === 1
+                ? t("Agent.sharedWithSingleOrganization", {
+                    organization:
+                      agentItem.sharedOrganizations?.[0]?.name ?? "",
+                  })
+                : t("Agent.sharedWithMultipleOrganizations", {
+                    count: sharedOrgCount,
+                  })}
+            </Badge>
+          )
+        : null
+    : null;
 
   return (
     <Link href={href} title={item.name}>
@@ -77,12 +105,15 @@ export function ShareableCard({
             </div>
 
             <div className="flex flex-col justify-around min-w-0 flex-1 overflow-hidden">
-              <span
-                className="truncate font-medium"
-                data-testid={`${type}-card-name`}
-              >
-                {item.name}
-              </span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="truncate font-medium"
+                  data-testid={`${type}-card-name`}
+                >
+                  {item.name}
+                </span>
+                {organizationBadge}
+              </div>
               <div className="text-xs text-muted-foreground flex items-center gap-1 min-w-0">
                 <time className="shrink-0">
                   {format(item.updatedAt, "MMM d, yyyy")}

@@ -42,7 +42,11 @@ export async function PUT(
     const data = AgentUpdateSchema.parse(body);
 
     // Check access for write operations
-    const hasAccess = await agentRepository.checkAccess(id, session.user.id);
+    const hasAccess = await agentRepository.checkAccess(
+      id,
+      session.user.id,
+      true,
+    );
     if (!hasAccess) {
       return new Response("Unauthorized", { status: 401 });
     }
@@ -56,10 +60,19 @@ export async function PUT(
       data.visibility = existingAgent.visibility;
     }
 
-    const agent = await agentRepository.updateAgent(id, session.user.id, data);
-    serverCache.delete(CacheKeys.agentInstructions(agent.id));
+    await agentRepository.updateAgent(id, session.user.id, data);
+    serverCache.delete(CacheKeys.agentInstructions(id));
 
-    return Response.json(agent);
+    const updatedAgent = await agentRepository.selectAgentById(
+      id,
+      session.user.id,
+    );
+
+    if (!updatedAgent) {
+      return new Response("Not Found", { status: 404 });
+    }
+
+    return Response.json(updatedAgent);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return Response.json(

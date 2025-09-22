@@ -81,6 +81,19 @@ export type OrganizationRepository = {
     organizationId: string,
     serverId: string,
   ) => Promise<void>;
+  listSharedAgentIds: (organizationId: string) => Promise<string[]>;
+  setSharedAgentIds: (
+    organizationId: string,
+    agentIds: string[],
+  ) => Promise<void>;
+  addSharedAgent: (
+    organizationId: string,
+    agentId: string,
+  ) => Promise<void>;
+  removeSharedAgent: (
+    organizationId: string,
+    agentId: string,
+  ) => Promise<void>;
 };
 
 export type OrganizationCreateInput = {
