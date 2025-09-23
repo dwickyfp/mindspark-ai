@@ -13,6 +13,8 @@ export type User = {
   email: string;
   image: string | null;
   preferences?: UserPreferences;
+  createdAt?: Date;
+  updatedAt?: Date;
 };
 
 export type UserRepository = {

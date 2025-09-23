@@ -30,7 +30,7 @@ describe("workflow-store", () => {
         path: ["person"],
       },
       {
-        name: "cgoing",
+        name: "john",
         age: 30,
       },
     );
@@ -40,7 +40,7 @@ describe("workflow-store", () => {
         path: ["person"],
       }),
     ).toEqual({
-      name: "cgoing",
+      name: "john",
       age: 30,
     });
 
@@ -49,7 +49,7 @@ describe("workflow-store", () => {
         nodeId: "v1",
         path: ["person", "name"],
       }),
-    ).toBe("cgoing");
+    ).toBe("john");
 
     expect(
       context.getOutput({
@@ -84,7 +84,7 @@ describe("workflow-store", () => {
               properties: {
                 name: {
                   type: "string",
-                  default: "cgoing",
+                  default: "john",
                 },
               },
             },
@@ -99,6 +99,6 @@ describe("workflow-store", () => {
         nodeId: "v1",
         path: ["name"],
       }),
-    ).toBe("cgoing");
+    ).toBe("john");
   });
 });

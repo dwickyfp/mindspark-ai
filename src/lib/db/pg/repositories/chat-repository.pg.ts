@@ -112,6 +112,15 @@ export const pgChatRepository: ChatRepository = {
     });
   },
 
+  getThreadCountForUser: async (userId: string): Promise<number> => {
+    const [result] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(ChatThreadSchema)
+      .where(eq(ChatThreadSchema.userId, userId));
+
+    return Number(result?.count ?? 0);
+  },
+
   updateThread: async (
     id: string,
     thread: Partial<Omit<ChatThread, "id" | "createdAt">>,

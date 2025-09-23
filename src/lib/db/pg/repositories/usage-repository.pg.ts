@@ -8,15 +8,16 @@ import {
   UserSchema,
 } from "../schema.pg";
 import {
+  AgentUsageAnalytics,
   ModelUsageAggregate,
   ModelUsageLogInsert,
   TokenUsageTotals,
   ToolUsageAggregate,
   ToolUsageLogInsert,
   UsageLogRepository,
-  AgentUsageAnalytics,
+  UserUsageSummary,
 } from "app-types/analytics";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 
 export const pgUsageLogRepository: UsageLogRepository = {
   async upsertModelUsage(log: ModelUsageLogInsert) {
@@ -203,5 +204,70 @@ export const pgUsageLogRepository: UsageLogRepository = {
     );
 
     return { totalInteractions, topAgents } satisfies AgentUsageAnalytics;
+  },
+
+  async getUserUsageSummary(userId, options) {
+    const days = options?.days ?? 7;
+
+    const startDate = new Date();
+    startDate.setUTCHours(0, 0, 0, 0);
+    startDate.setUTCDate(startDate.getUTCDate() - (days - 1));
+
+    const dateExpr = sql<string>`TO_CHAR(${ModelUsageLogSchema.createdAt}, 'YYYY-MM-DD')`;
+
+    const dailyRows = await db
+      .select({
+        date: dateExpr,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(ModelUsageLogSchema)
+      .where(
+        and(
+          eq(ModelUsageLogSchema.userId, userId),
+          gte(ModelUsageLogSchema.createdAt, startDate),
+        ),
+      )
+      .groupBy(dateExpr)
+      .orderBy(dateExpr);
+
+    const dailyMap = new Map<string, number>();
+    dailyRows.forEach((row) => {
+      dailyMap.set(row.date, Number(row.count));
+    });
+
+    const daily: UserUsageSummary["daily"] = Array.from({ length: days }, (_, index) => {
+      const current = new Date(startDate);
+      current.setUTCDate(startDate.getUTCDate() + index);
+      const isoDate = current.toISOString().slice(0, 10);
+      return {
+        date: isoDate,
+        count: dailyMap.get(isoDate) ?? 0,
+      };
+    });
+
+    const [summaryRow] = await db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        first: sql<Date | null>`MIN(${ModelUsageLogSchema.createdAt})`,
+        last: sql<Date | null>`MAX(${ModelUsageLogSchema.createdAt})`,
+      })
+      .from(ModelUsageLogSchema)
+      .where(eq(ModelUsageLogSchema.userId, userId));
+
+    const normalizeDate = (value: unknown): Date | null => {
+      if (!value) return null;
+      if (value instanceof Date) {
+        return value;
+      }
+      const date = new Date(value as string);
+      return Number.isNaN(date.getTime()) ? null : date;
+    };
+
+    return {
+      totalQueries: Number(summaryRow?.total ?? 0),
+      firstActivityAt: normalizeDate(summaryRow?.first),
+      lastActivityAt: normalizeDate(summaryRow?.last),
+      daily,
+    } satisfies UserUsageSummary;
   },
 };

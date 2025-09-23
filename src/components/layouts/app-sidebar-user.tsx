@@ -25,6 +25,7 @@ import {
   Sun,
   MoonStar,
   ChevronRight,
+  BarChart3,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { appStore } from "@/app/store";
@@ -38,12 +39,14 @@ import { useCallback } from "react";
 import { GithubIcon } from "ui/github-icon";
 import { useThemeStyle } from "@/hooks/use-theme-style";
 import { Session, User } from "better-auth";
+import { useRouter } from "next/navigation";
 
 export function AppSidebarUser({
   session,
 }: { session?: { session: Session; user: User } }) {
   const appStoreMutate = appStore((state) => state.mutate);
   const t = useTranslations("Layout");
+  const router = useRouter();
 
   const user = session?.user;
 
@@ -124,6 +127,15 @@ export function AppSidebarUser({
             </DropdownMenuItem>
             <SelectTheme />
             <SelectLanguage />
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={() => {
+                router.push("/analytics");
+              }}
+            >
+              <BarChart3 className="size-4 text-foreground" />
+              <span>{t("analytics")}</span>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="cursor-pointer"

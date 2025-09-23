@@ -126,6 +126,8 @@ export type ChatRepository = {
     })[]
   >;
 
+  getThreadCountForUser(userId: string): Promise<number>;
+
   updateThread(
     id: string,
     thread: Partial<Omit<ChatThread, "id" | "createdAt">>,

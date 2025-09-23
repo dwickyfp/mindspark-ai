@@ -14,8 +14,8 @@ Mind Spark is an open-source AI collaboration workspace. It brings chat, shareab
 ## Quick Start
 
 ```bash
-git clone https://github.com/cgoinglove/mind-spark.git
-cd mind-spark
+git clone https://github.com/dwickyfp/mindspark-ai.git
+cd mindspark-ai
 pnpm install
 ```
 

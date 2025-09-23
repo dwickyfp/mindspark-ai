@@ -57,6 +57,18 @@ export type TokenUsageTotals = {
   totalTokens: number;
 };
 
+export type DailyUsageStat = {
+  date: string;
+  count: number;
+};
+
+export type UserUsageSummary = {
+  totalQueries: number;
+  firstActivityAt: Date | null;
+  lastActivityAt: Date | null;
+  daily: DailyUsageStat[];
+};
+
 export type UsageLogRepository = {
   upsertModelUsage: (log: ModelUsageLogInsert) => Promise<void>;
   bulkUpsertToolUsage: (logs: ToolUsageLogInsert[]) => Promise<void>;
@@ -70,4 +82,10 @@ export type UsageLogRepository = {
   getAgentUsageForUsers: (
     userIds: string[],
   ) => Promise<AgentUsageAnalytics>;
+  getUserUsageSummary: (
+    userId: string,
+    options?: {
+      days?: number;
+    },
+  ) => Promise<UserUsageSummary>;
 };
