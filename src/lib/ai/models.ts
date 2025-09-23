@@ -69,6 +69,7 @@ const staticModels = {
     "gemini-2.0-flash-exp:free": openrouter("google/gemini-2.0-flash-exp:free"),
     "grok-4-fast:free": openrouter("x-ai/grok-4-fast:free"),
     "gpt-5": openrouter("openai/gpt-5"),
+    "grok-4": openrouter("x-ai/grok-4")
   },
 };
 
