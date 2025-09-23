@@ -40,7 +40,7 @@ type MetricCardProps = {
 
 function MetricCard({ label, value, icon: Icon, helper }: MetricCardProps) {
   return (
-    <Card className="border-border/60">
+    <Card className="border-border/60 dark:border-white/20">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {label}
@@ -72,7 +72,7 @@ type AnalyticsListProps = {
 
 function AnalyticsList({ title, items, emptyLabel }: AnalyticsListProps) {
   return (
-    <Card className="h-full border-border/60">
+    <Card className="h-full border-border/60 dark:border-white/20">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold">{title}</CardTitle>
       </CardHeader>
@@ -149,7 +149,7 @@ function LoadingState() {
 function EmptyState({ label }: { label: string }) {
   return (
     <div className={PAGE_CONTAINER_CLASS}>
-      <Card className="border-border/60">
+      <Card className="border-border/60 dark:border-white/20">
         <CardContent className="py-16 text-center">
           <p className="text-sm text-muted-foreground">{label}</p>
         </CardContent>
@@ -161,7 +161,7 @@ function EmptyState({ label }: { label: string }) {
 function ErrorState({ label }: { label: string }) {
   return (
     <div className={PAGE_CONTAINER_CLASS}>
-      <Card className="border-destructive/40 bg-destructive/5">
+      <Card className="border-destructive/40 bg-destructive/5 dark:border-white/20">
         <CardContent className="py-6 text-center">
           <p className="text-sm font-medium text-destructive">{label}</p>
         </CardContent>
@@ -353,7 +353,7 @@ export default function UserAnalyticsDashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <Card className="border-border/60">
+        <Card className="border-border/60 dark:border-white/20">
           <CardHeader className="flex flex-row items-center justify-between">
             <div className="space-y-1">
               <CardTitle>{t("weeklyChartTitle")}</CardTitle>
@@ -407,7 +407,7 @@ export default function UserAnalyticsDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60">
+        <Card className="border-border/60 dark:border-white/20">
           <CardHeader>
             <CardTitle>{t("tokenBreakdownTitle")}</CardTitle>
           </CardHeader>
@@ -474,7 +474,7 @@ export default function UserAnalyticsDashboard() {
         />
       </div>
 
-      <Card className="border-border/60">
+      <Card className="border-border/60 dark:border-white/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CalendarClock className="h-4 w-4 text-muted-foreground" />
