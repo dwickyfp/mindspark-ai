@@ -75,6 +75,11 @@
     "Attachments": {
       "add": "Adjuntar archivos",
       "download": "Descargar",
+      "openPreview": "Mostrar vista previa",
+      "previewActive": "Vista previa visible",
+      "closePreview": "Cerrar vista previa",
+      "openInNewTab": "Abrir en una pestaña nueva",
+      "previewUnavailable": "La vista previa no está disponible para este archivo.",
       "failedToAttach": "No pudimos adjuntar ese archivo. Por favor, inténtalo de nuevo.",
       "limitReached": "Puedes adjuntar hasta {count} archivos a la vez.",
       "remove": "Eliminar adjunto",

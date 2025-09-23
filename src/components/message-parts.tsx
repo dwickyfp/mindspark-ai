@@ -25,7 +25,15 @@ import { Button } from "ui/button";
 import { Markdown } from "./markdown";
 import { cn, safeJSONParse, truncateString } from "lib/utils";
 import JsonView from "ui/json-view";
-import { useMemo, useState, memo, useEffect, useRef, useCallback } from "react";
+import {
+  useMemo,
+  useState,
+  memo,
+  useEffect,
+  useRef,
+  useCallback,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { MessageEditor } from "./message-editor";
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { useCopy } from "@/hooks/use-copy";
@@ -65,6 +73,7 @@ import { notify } from "lib/notify";
 import { ModelProviderIcon } from "ui/model-provider-icon";
 import { appStore } from "@/app/store";
 import { BACKGROUND_COLORS, EMOJI_DATA } from "lib/const";
+import type { AttachmentSelection } from "@/types/chat-attachments";
 
 type MessagePart = UIMessage["parts"][number];
 type TextMessagePart = Extract<MessagePart, { type: "text" }>;
@@ -287,9 +296,18 @@ export const UserMessagePart = memo(
 interface AttachmentMessagePartProps {
   part: FileMessagePart;
   isUser: boolean;
+  selection: AttachmentSelection;
+  onPreview?: (selection: AttachmentSelection) => void;
+  isSelected?: boolean;
 }
 
-export function AttachmentMessagePart({ part, isUser }: AttachmentMessagePartProps) {
+export function AttachmentMessagePart({
+  part,
+  isUser,
+  selection,
+  onPreview,
+  isSelected,
+}: AttachmentMessagePartProps) {
   const t = useTranslations("Chat.Attachments");
   const filename = part.filename || t("untitled");
   const isImage = part.mediaType.startsWith("image/");
@@ -297,10 +315,35 @@ export function AttachmentMessagePart({ part, isUser }: AttachmentMessagePartPro
   const data = (part as { data?: string }).data;
   const downloadUrl = part.url ?? (data ? `data:${part.mediaType};base64,${data}` : undefined);
   const hasDownload = Boolean(downloadUrl);
+  const { messageId, partIndex } = selection;
+
+  const previewLabel = isSelected ? t("previewActive") : t("openPreview");
+
+  const handlePreview = useCallback(() => {
+    if (!onPreview) return;
+    onPreview({ messageId, partIndex });
+  }, [onPreview, messageId, partIndex]);
+
+  const handleKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        handlePreview();
+      }
+    },
+    [handlePreview],
+  );
 
   const containerClass = cn(
-    "flex max-w-md flex-col gap-3 rounded-2xl border border-border/60 p-3 shadow-sm",
-    isUser ? "bg-accent text-accent-foreground" : "bg-muted/60",
+    "flex max-w-md flex-col gap-3 rounded-2xl border border-border/60 p-3 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer select-none",
+    isUser
+      ? "bg-accent text-accent-foreground hover:bg-accent/90"
+      : "bg-muted/60 hover:bg-muted/70",
+    isSelected
+      ? isUser
+        ? "border-primary/60 ring-2 ring-primary/60"
+        : "border-primary/60 ring-2 ring-primary/60 bg-primary/10"
+      : "hover:border-primary/50",
   );
 
   const subtleTextClass = cn(
@@ -317,12 +360,22 @@ export function AttachmentMessagePart({ part, isUser }: AttachmentMessagePartPro
 
   return (
     <div className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}>
-      <div className={containerClass}>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-pressed={isSelected || false}
+        aria-label={`${previewLabel}: ${filename}`}
+        onClick={handlePreview}
+        onKeyDown={handleKeyDown}
+        className={containerClass}
+        data-selected={isSelected ? "true" : undefined}
+      >
         {isImage && downloadUrl && (
           <a
             href={downloadUrl}
             target="_blank"
             rel="noreferrer"
+            onClick={(event) => event.stopPropagation()}
             className="block overflow-hidden rounded-xl border border-border/60"
           >
             <img
@@ -334,7 +387,12 @@ export function AttachmentMessagePart({ part, isUser }: AttachmentMessagePartPro
         )}
 
         {isAudio && downloadUrl && (
-          <audio controls src={downloadUrl} className="w-full" />
+          <audio
+            controls
+            src={downloadUrl}
+            className="w-full"
+            onClick={(event) => event.stopPropagation()}
+          />
         )}
 
         <div className="flex items-center justify-between gap-3">
@@ -348,6 +406,7 @@ export function AttachmentMessagePart({ part, isUser }: AttachmentMessagePartPro
             <a
               href={downloadUrl}
               download={part.filename ?? undefined}
+              onClick={(event) => event.stopPropagation()}
               className="flex items-center gap-1 text-xs font-medium hover:underline"
             >
               <Download className="size-3" />
@@ -359,6 +418,10 @@ export function AttachmentMessagePart({ part, isUser }: AttachmentMessagePartPro
           <span className="truncate">{part.mediaType}</span>
           {isImage && <ImageIcon className="size-3" />}
           {isAudio && <FileAudio className="size-3" />}
+        </div>
+        <div className={cn("flex items-center justify-between", subtleTextClass)}>
+          <span className="font-medium text-[11px] leading-4">{previewLabel}</span>
+          <ChevronRight className="size-3 opacity-60" />
         </div>
       </div>
     </div>
