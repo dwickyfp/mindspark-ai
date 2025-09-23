@@ -4,7 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "ui/button";
 import { Badge } from "ui/badge";
-import { Download, ExternalLink, FileIcon, X } from "lucide-react";
+import { FileIcon, X } from "lucide-react";
 import { formatFileSize } from "lib/utils";
 import { useTranslations } from "next-intl";
 import type { SelectedAttachment, FileAttachmentPart } from "@/types/chat-attachments";
@@ -60,7 +60,7 @@ export function AttachmentPreview({ attachment, onClose }: AttachmentPreviewProp
       {hasAttachment && attachment ? (
         <div className="hidden lg:flex w-[360px] shrink-0 px-4 py-6">
           <div className="sticky top-6 w-full">
-            <div className="flex h-[calc(100vh-120px)] min-h-[360px] flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xl">
+            <div className="flex h-[calc(100vh-120px)] min-h-[360px] flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xl dark:border-white/40">
               <header className="flex items-start gap-3 border-b border-border/80 px-4 py-3">
                 <div className="flex-1 min-w-0 space-y-1">
                   <p className="truncate text-sm font-semibold text-foreground" title={filename}>
@@ -95,35 +95,6 @@ export function AttachmentPreview({ attachment, onClose }: AttachmentPreviewProp
                   t,
                 })}
               </div>
-
-              <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border/80 px-4 py-3 text-xs">
-                {downloadUrl ? (
-                  <a
-                    href={downloadUrl}
-                    download={attachment.part.filename ?? undefined}
-                    className="inline-flex items-center gap-2 text-xs font-medium hover:underline"
-                  >
-                    <Download className="size-4" />
-                    {t("download")}
-                  </a>
-                ) : (
-                  <span className="text-muted-foreground">{t("previewUnavailable")}</span>
-                )}
-
-                {downloadUrl && (
-                  <Button variant="ghost" size="sm" asChild>
-                    <a
-                      href={downloadUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2"
-                    >
-                      <ExternalLink className="size-4" />
-                      {t("openInNewTab")}
-                    </a>
-                  </Button>
-                )}
-              </footer>
             </div>
           </div>
         </div>
@@ -144,7 +115,7 @@ export function AttachmentPreview({ attachment, onClose }: AttachmentPreviewProp
               aria-label={t("closePreview")}
               onClick={onClose}
             />
-            <div className="relative mx-auto mb-6 w-[min(95%,420px)] max-w-full overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+            <div className="relative mx-auto mb-6 w-[min(95%,420px)] max-w-full overflow-hidden rounded-2xl border border-border bg-card shadow-xl dark:border-white/40">
               <header className="flex items-start gap-3 border-b border-border/80 px-4 py-3">
                 <div className="flex-1 min-w-0 space-y-1">
                   <p className="truncate text-sm font-semibold text-foreground" title={attachment.part.filename ?? t("untitled")}>
@@ -178,33 +149,6 @@ export function AttachmentPreview({ attachment, onClose }: AttachmentPreviewProp
                   t,
                 })}
               </div>
-              <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border/80 px-4 py-3 text-xs">
-                {downloadUrl ? (
-                  <>
-                    <a
-                      href={downloadUrl}
-                      download={attachment.part.filename ?? undefined}
-                      className="inline-flex items-center gap-2 text-xs font-medium hover:underline"
-                    >
-                      <Download className="size-4" />
-                      {t("download")}
-                    </a>
-                    <Button variant="ghost" size="sm" asChild>
-                      <a
-                        href={downloadUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-2"
-                      >
-                        <ExternalLink className="size-4" />
-                        {t("openInNewTab")}
-                      </a>
-                    </Button>
-                  </>
-                ) : (
-                  <span className="text-muted-foreground">{t("previewUnavailable")}</span>
-                )}
-              </footer>
             </div>
           </motion.div>
         ) : null}

@@ -15,7 +15,6 @@ import {
   TriangleAlert,
   HammerIcon,
   EllipsisIcon,
-  Download,
   FileAudio,
   FileIcon,
   ImageIcon,
@@ -314,7 +313,6 @@ export function AttachmentMessagePart({
   const isAudio = part.mediaType.startsWith("audio/");
   const data = (part as { data?: string }).data;
   const downloadUrl = part.url ?? (data ? `data:${part.mediaType};base64,${data}` : undefined);
-  const hasDownload = Boolean(downloadUrl);
   const { messageId, partIndex } = selection;
 
   const previewLabel = isSelected ? t("previewActive") : t("openPreview");
@@ -335,7 +333,7 @@ export function AttachmentMessagePart({
   );
 
   const containerClass = cn(
-    "flex max-w-md flex-col gap-3 rounded-2xl border border-border/60 p-3 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer select-none",
+    "flex max-w-md flex-col gap-3 rounded-2xl border border-border/60 p-3 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer select-none dark:border-white/30",
     isUser
       ? "bg-accent text-accent-foreground hover:bg-accent/90"
       : "bg-muted/60 hover:bg-muted/70",
@@ -343,7 +341,7 @@ export function AttachmentMessagePart({
       ? isUser
         ? "border-primary/60 ring-2 ring-primary/60"
         : "border-primary/60 ring-2 ring-primary/60 bg-primary/10"
-      : "hover:border-primary/50",
+      : "hover:border-primary/50 dark:hover:border-white/50",
   );
 
   const subtleTextClass = cn(
@@ -355,8 +353,6 @@ export function AttachmentMessagePart({
     "truncate text-xs font-semibold",
     isUser ? "text-accent-foreground" : "text-foreground",
   );
-
-  const downloadLabel = t("download");
 
   return (
     <div className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}>
@@ -371,19 +367,13 @@ export function AttachmentMessagePart({
         data-selected={isSelected ? "true" : undefined}
       >
         {isImage && downloadUrl && (
-          <a
-            href={downloadUrl}
-            target="_blank"
-            rel="noreferrer"
-            onClick={(event) => event.stopPropagation()}
-            className="block overflow-hidden rounded-xl border border-border/60"
-          >
+          <div className="overflow-hidden rounded-xl border border-border/60">
             <img
               src={downloadUrl}
               alt={filename}
               className="max-h-64 w-full object-cover"
             />
-          </a>
+          </div>
         )}
 
         {isAudio && downloadUrl && (
@@ -402,17 +392,6 @@ export function AttachmentMessagePart({
               {filename}
             </span>
           </div>
-          {hasDownload && (
-            <a
-              href={downloadUrl}
-              download={part.filename ?? undefined}
-              onClick={(event) => event.stopPropagation()}
-              className="flex items-center gap-1 text-xs font-medium hover:underline"
-            >
-              <Download className="size-3" />
-              {downloadLabel}
-            </a>
-          )}
         </div>
         <div className={cn("flex items-center gap-2", subtleTextClass)}>
           <span className="truncate">{part.mediaType}</span>
