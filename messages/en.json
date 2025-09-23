@@ -182,6 +182,17 @@
     }
   },
   "Chat": {
+    "Attachments": {
+      "add": "Attach files",
+      "download": "Download",
+      "failedToAttach": "We couldn't attach that file. Please try again.",
+      "limitReached": "You can attach up to {count} files at a time.",
+      "remove": "Remove attachment",
+      "tooLarge": "Files must be smaller than {limit}.",
+      "tooltip": "Supported file types: {types} • Max size {limit} each",
+      "unsupportedType": "This file type isn't supported yet.",
+      "untitled": "Attachment"
+    },
     "Error": "Chat Error",
     "thisMessageWasNotSavedPleaseTryTheChatAgain": "This message was not saved. Please try the chat again.",
     "Greeting": {

@@ -72,6 +72,17 @@
     }
   },
   "Chat": {
+    "Attachments": {
+      "add": "Adjuntar archivos",
+      "download": "Descargar",
+      "failedToAttach": "No pudimos adjuntar ese archivo. Por favor, inténtalo de nuevo.",
+      "limitReached": "Puedes adjuntar hasta {count} archivos a la vez.",
+      "remove": "Eliminar adjunto",
+      "tooLarge": "Los archivos deben ser más pequeños que {limit}.",
+      "unsupportedType": "Este tipo de archivo no es compatible aún.",
+      "untitled": "Adjunto",
+      "tooltip": "Tipos de archivo compatibles: {types} • Tamaño máximo {limit} cada uno"
+    },
     "Error": "Error de Chat",
     "thisMessageWasNotSavedPleaseTryTheChatAgain": "Este mensaje no se guardó. Por favor, intenta el chat nuevamente.",
     "Greeting": {

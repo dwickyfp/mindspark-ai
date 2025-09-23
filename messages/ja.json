@@ -72,6 +72,17 @@
     }
   },
   "Chat": {
+    "Attachments": {
+      "add": "ファイルを添付",
+      "download": "ダウンロード",
+      "failedToAttach": "ファイルを添付できませんでした。もう一度お試しください。",
+      "limitReached": "一度に最大 {count} 件のファイルを添付できます。",
+      "remove": "添付ファイルを削除",
+      "tooLarge": "ファイルは {limit} より小さくする必要があります。",
+      "unsupportedType": "このファイルタイプはまだサポートされていません。",
+      "untitled": "添付ファイル",
+      "tooltip": "サポートされているファイルタイプ: {types} • 最大サイズ {limit} 各"
+    },
     "Error": "チャットエラー",
     "thisMessageWasNotSavedPleaseTryTheChatAgain": "このメッセージは保存されませんでした。もう一度チャットをお試しください。",
     "Greeting": {
