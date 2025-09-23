@@ -75,6 +75,11 @@
     "Attachments": {
       "add": "ファイルを添付",
       "download": "ダウンロード",
+      "openPreview": "プレビューを表示",
+      "previewActive": "プレビューを表示中",
+      "closePreview": "プレビューを閉じる",
+      "openInNewTab": "新しいタブで開く",
+      "previewUnavailable": "このファイルのプレビューは利用できません。",
       "failedToAttach": "ファイルを添付できませんでした。もう一度お試しください。",
       "limitReached": "一度に最大 {count} 件のファイルを添付できます。",
       "remove": "添付ファイルを削除",

@@ -17,6 +17,7 @@ import { ChevronDown, ChevronUp, TriangleAlertIcon } from "lucide-react";
 import { Button } from "ui/button";
 import { useTranslations } from "next-intl";
 import { ChatMetadata } from "app-types/chat";
+import type { AttachmentSelection } from "@/types/chat-attachments";
 
 interface Props {
   message: UIMessage;
@@ -30,6 +31,8 @@ interface Props {
   addToolResult?: UseChatHelpers<UIMessage>["addToolResult"];
   messageIndex: number;
   status: UseChatHelpers<UIMessage>["status"];
+  onAttachmentPreview?: (selection: AttachmentSelection) => void;
+  selectedAttachment?: AttachmentSelection | null;
 }
 
 const PurePreviewMessage = ({
@@ -44,6 +47,8 @@ const PurePreviewMessage = ({
   addToolResult,
   messageIndex,
   sendMessage,
+  onAttachmentPreview,
+  selectedAttachment,
 }: Props) => {
   const isUserMessage = useMemo(() => message.role === "user", [message.role]);
   if (message.role == "system") {
@@ -107,11 +112,18 @@ const PurePreviewMessage = ({
             }
 
             if (part.type === "file") {
+              const selection = { messageId: message.id, partIndex: index };
               return (
                 <AttachmentMessagePart
                   key={key}
                   part={part}
                   isUser={isUserMessage}
+                  selection={selection}
+                  onPreview={onAttachmentPreview}
+                  isSelected={
+                    selectedAttachment?.messageId === selection.messageId &&
+                    selectedAttachment?.partIndex === selection.partIndex
+                  }
                 />
               );
             }
@@ -160,6 +172,14 @@ export const PreviewMessage = memo(
     if (prevProps.isLastMessage !== nextProps.isLastMessage) return false;
 
     if (prevProps.className !== nextProps.className) return false;
+
+    if (prevProps.onAttachmentPreview !== nextProps.onAttachmentPreview)
+      return false;
+
+    const prevSelection = prevProps.selectedAttachment;
+    const nextSelection = nextProps.selectedAttachment;
+    if (prevSelection?.messageId !== nextSelection?.messageId) return false;
+    if (prevSelection?.partIndex !== nextSelection?.partIndex) return false;
 
     if (nextProps.isLoading && nextProps.isLastMessage) return false;
 
