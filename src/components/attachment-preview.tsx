@@ -57,57 +57,73 @@ export function AttachmentPreview({ attachment, onClose }: AttachmentPreviewProp
 
   return (
     <>
-      {hasAttachment && attachment ? (
-        <div className="hidden lg:flex w-[360px] shrink-0 px-4 py-6">
-          <div className="sticky top-6 w-full">
-            <div className="flex h-[calc(100vh-120px)] min-h-[360px] flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xl dark:border-white/40">
-              <header className="flex items-start gap-3 border-b border-border/80 px-4 py-3">
-                <div className="flex-1 min-w-0 space-y-1">
-                  <p className="truncate text-sm font-semibold text-foreground" title={filename}>
-                    {filename}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span className="truncate" title={attachment.part.mediaType}>
-                      {attachment.part.mediaType}
-                    </span>
-                    {fileSize ? <span>{formatFileSize(fileSize)}</span> : null}
-                    <Badge variant="outline" className="uppercase tracking-wide text-[10px]">
-                      {attachment.message.role}
-                    </Badge>
+      <AnimatePresence>
+        {hasAttachment && attachment ? (
+          <motion.aside
+            key="attachment-preview-desktop"
+            initial={{ opacity: 0, x: 120 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 120 }}
+            transition={{ duration: 0.28, ease: "easeOut" }}
+            className="hidden lg:flex w-[360px] shrink-0 px-4 py-6"
+          >
+            <div className="sticky top-6 w-full">
+              <motion.div
+                layout
+                initial={{ opacity: 0, x: 32 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 32 }}
+                transition={{ duration: 0.24, ease: "easeOut" }}
+                className="flex h-[calc(100vh-120px)] min-h-[360px] flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xl dark:border-white/40"
+              >
+                <header className="flex items-start gap-3 border-b border-border/80 px-4 py-3">
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <p className="truncate text-sm font-semibold text-foreground" title={filename}>
+                      {filename}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span className="truncate" title={attachment.part.mediaType}>
+                        {attachment.part.mediaType}
+                      </span>
+                      {fileSize ? <span>{formatFileSize(fileSize)}</span> : null}
+                      <Badge variant="outline" className="uppercase tracking-wide text-[10px]">
+                        {attachment.message.role}
+                      </Badge>
+                    </div>
                   </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground"
-                  onClick={onClose}
-                  aria-label={t("closePreview")}
-                >
-                  <X className="size-4" />
-                </Button>
-              </header>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground"
+                    onClick={onClose}
+                    aria-label={t("closePreview")}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </header>
 
-              <div className="flex-1 overflow-auto bg-muted/10">
-                {renderPreviewContent({
-                  part: attachment.part,
-                  downloadUrl,
-                  filename,
-                  t,
-                })}
-              </div>
+                <div className="flex-1 overflow-auto bg-muted/10">
+                  {renderPreviewContent({
+                    part: attachment.part,
+                    downloadUrl,
+                    filename,
+                    t,
+                  })}
+                </div>
+              </motion.div>
             </div>
-          </div>
-        </div>
-      ) : null}
+          </motion.aside>
+        ) : null}
+      </AnimatePresence>
       <AnimatePresence>
         {attachment ? (
           <motion.div
             key="attachment-preview-mobile"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 32 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="lg:hidden fixed inset-0 z-50 flex items-end bg-background/80 backdrop-blur"
+            initial={{ opacity: 0, x: "100%" }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: "100%" }}
+            transition={{ duration: 0.28, ease: "easeOut" }}
+            className="lg:hidden fixed inset-0 z-50 flex justify-end bg-background/80 backdrop-blur"
           >
             <button
               className="absolute inset-0"
@@ -115,7 +131,14 @@ export function AttachmentPreview({ attachment, onClose }: AttachmentPreviewProp
               aria-label={t("closePreview")}
               onClick={onClose}
             />
-            <div className="relative mx-auto mb-6 w-[min(95%,420px)] max-w-full overflow-hidden rounded-2xl border border-border bg-card shadow-xl dark:border-white/40">
+            <motion.div
+              layout
+              initial={{ opacity: 0, x: 48 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 48 }}
+              transition={{ duration: 0.24, ease: "easeOut" }}
+              className="relative m-4 w-[min(95%,420px)] max-w-full overflow-hidden rounded-2xl border border-border bg-card shadow-xl dark:border-white/40"
+            >
               <header className="flex items-start gap-3 border-b border-border/80 px-4 py-3">
                 <div className="flex-1 min-w-0 space-y-1">
                   <p className="truncate text-sm font-semibold text-foreground" title={attachment.part.filename ?? t("untitled")}>
@@ -149,7 +172,7 @@ export function AttachmentPreview({ attachment, onClose }: AttachmentPreviewProp
                   t,
                 })}
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         ) : null}
       </AnimatePresence>
