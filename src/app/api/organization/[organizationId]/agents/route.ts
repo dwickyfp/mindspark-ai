@@ -42,9 +42,7 @@ export async function PUT(
   if (!membership) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  if (membership.role !== "owner" && membership.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const isManager = membership.role === "owner" || membership.role === "admin";
 
   const payload = UpdateShareSchema.safeParse(await request.json());
   if (!payload.success) {
@@ -56,32 +54,55 @@ export async function PUT(
 
   const agentIds = payload.data.agentIds;
 
-  if (agentIds.length) {
-    const ownedAgents = await agentRepository.selectAgentsByUserId(
-      session.user.id,
+  const ownedAgents = await agentRepository.selectAgentsByUserId(
+    session.user.id,
+  );
+  const ownedAgentMap = new Map(ownedAgents.map((agent) => [agent.id, agent]));
+
+  const privateOwned = agentIds.filter((id) => {
+    const agent = ownedAgentMap.get(id);
+    return agent?.visibility === "private";
+  });
+  if (privateOwned.length) {
+    return NextResponse.json(
+      { error: "Only read-only or public agents can be shared" },
+      { status: 400 },
     );
-    const ownedAgentMap = new Map(ownedAgents.map((agent) => [agent.id, agent]));
-
-    const unauthorized = agentIds.filter((id) => !ownedAgentMap.has(id));
-    if (unauthorized.length) {
-      return NextResponse.json(
-        { error: "Cannot share agents you do not own" },
-        { status: 403 },
-      );
-    }
-
-    const nonShareable = agentIds.filter((id) => {
-      const agent = ownedAgentMap.get(id);
-      return agent?.visibility === "private";
-    });
-    if (nonShareable.length) {
-      return NextResponse.json(
-        { error: "Only read-only or public agents can be shared" },
-        { status: 400 },
-      );
-    }
   }
 
-  await organizationRepository.setSharedAgentIds(organizationId, agentIds);
+  const ownedShareableIds = agentIds.filter((id) => ownedAgentMap.has(id));
+  const sanitizedAgentIds = isManager ? agentIds : ownedShareableIds;
+
+  const currentSharedAgents =
+    await organizationRepository.listSharedAgentsWithDetails(organizationId);
+
+  if (isManager) {
+    await organizationRepository.setSharedAgentIds(
+      organizationId,
+      sanitizedAgentIds,
+    );
+    return NextResponse.json({ success: true });
+  }
+
+  const currentlySharedOwned = currentSharedAgents
+    .filter((agent) => agent.userId === session.user.id)
+    .map((agent) => agent.id);
+
+  const desired = new Set(sanitizedAgentIds);
+  const existing = new Set(currentlySharedOwned);
+
+  const toAdd = sanitizedAgentIds.filter((id) => !existing.has(id));
+  const toRemove = currentlySharedOwned.filter((id) => !desired.has(id));
+
+  await Promise.all(
+    toAdd.map((id) => organizationRepository.addSharedAgent(organizationId, id)),
+  );
+
+  await Promise.all(
+    toRemove.map((id) =>
+      organizationRepository.removeSharedAgent(organizationId, id),
+    ),
+  );
+
   return NextResponse.json({ success: true });
 }
