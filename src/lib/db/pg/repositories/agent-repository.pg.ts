@@ -66,8 +66,7 @@ export const pgAgentRepository: AgentRepository = {
     if (!agent) return null;
 
     const isOwner = agent.userId === userId;
-    const hasVisibilityAccess =
-      agent.visibility === "public" || agent.visibility === "readonly";
+    const isPublic = agent.visibility === "public";
 
     const sharedOrgRows = await db
       .select({
@@ -94,7 +93,7 @@ export const pgAgentRepository: AgentRepository = {
 
     const hasOrgAccess = sharedOrgRows.some((row) => row.isMember);
 
-    if (!isOwner && !hasVisibilityAccess && !hasOrgAccess) {
+    if (!isOwner && !isPublic && !hasOrgAccess) {
       return null;
     }
 
@@ -111,11 +110,9 @@ export const pgAgentRepository: AgentRepository = {
       ? "personal"
       : hasOrgAccess
         ? "organization"
-        : agent.visibility === "public"
+        : isPublic
           ? "public"
-          : agent.visibility === "readonly"
-            ? "readonly"
-            : "personal";
+          : "personal";
 
     return {
       ...agent,
@@ -210,6 +207,12 @@ export const pgAgentRepository: AgentRepository = {
       )
       .returning();
 
+    if (result?.visibility === "private") {
+      await db
+        .delete(OrganizationAgentSchema)
+        .where(eq(OrganizationAgentSchema.agentId, id));
+    }
+
     return {
       ...result,
       description: result.description ?? undefined,
@@ -264,11 +267,6 @@ export const pgAgentRepository: AgentRepository = {
     });
 
     const ownedCondition = eq(AgentSchema.userId, currentUserId);
-    const sharedVisibilityCondition = or(
-      eq(AgentSchema.visibility, "public"),
-      eq(AgentSchema.visibility, "readonly"),
-    );
-
     const sharedOrgCondition = sql<boolean>`EXISTS (
       SELECT 1
       FROM ${OrganizationAgentSchema}
@@ -278,7 +276,10 @@ export const pgAgentRepository: AgentRepository = {
         AND ${OrganizationMemberSchema.userId} = ${currentUserId}
     )`;
 
-    const accessibleCondition = or(sharedVisibilityCondition, sharedOrgCondition);
+    const accessibleCondition = or(
+      eq(AgentSchema.visibility, "public"),
+      sharedOrgCondition,
+    );
 
     const sharedCondition = and(
       ne(AgentSchema.userId, currentUserId),
@@ -415,7 +416,7 @@ export const pgAgentRepository: AgentRepository = {
     }
     if (userId == agent.userId) return true;
     if (!destructive) {
-      if (agent.visibility === "public" || agent.visibility === "readonly") {
+      if (agent.visibility === "public") {
         return true;
       }
 

@@ -1,5 +1,6 @@
 import { pgDb as db } from "../db.pg";
 import {
+  AgentSchema,
   OrganizationMemberSchema,
   OrganizationMcpServerSchema,
   OrganizationAgentSchema,
@@ -13,7 +14,7 @@ import {
   OrganizationRole,
   OrganizationWithMembershipRole,
 } from "app-types/organization";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { generateUUID } from "lib/utils";
 
 function slugify(input: string): string {
@@ -360,7 +361,19 @@ export const pgOrganizationRepository: OrganizationRepository = {
     const rows = await db
       .select({ agentId: OrganizationAgentSchema.agentId })
       .from(OrganizationAgentSchema)
-      .where(eq(OrganizationAgentSchema.organizationId, organizationId));
+      .innerJoin(
+        AgentSchema,
+        eq(OrganizationAgentSchema.agentId, AgentSchema.id),
+      )
+      .where(
+        and(
+          eq(OrganizationAgentSchema.organizationId, organizationId),
+          or(
+            eq(AgentSchema.visibility, "public"),
+            eq(AgentSchema.visibility, "readonly"),
+          ),
+        ),
+      );
     return rows.map((row) => row.agentId);
   },
 
@@ -371,10 +384,28 @@ export const pgOrganizationRepository: OrganizationRepository = {
         .from(OrganizationAgentSchema)
         .where(eq(OrganizationAgentSchema.organizationId, organizationId));
 
-      const existingIds = new Set(existing.map((row) => row.agentId));
-      const targetIds = new Set(agentIds);
+      const sanitizedAgentIds =
+        agentIds.length === 0
+          ? []
+          : (
+              await tx
+                .select({ id: AgentSchema.id })
+                .from(AgentSchema)
+                .where(
+                  and(
+                    inArray(AgentSchema.id, agentIds),
+                    or(
+                      eq(AgentSchema.visibility, "public"),
+                      eq(AgentSchema.visibility, "readonly"),
+                    ),
+                  ),
+                )
+            ).map((row) => row.id);
 
-      const toInsert = agentIds.filter((id) => !existingIds.has(id));
+      const existingIds = new Set(existing.map((row) => row.agentId));
+      const targetIds = new Set(sanitizedAgentIds);
+
+      const toInsert = sanitizedAgentIds.filter((id) => !existingIds.has(id));
       const toDelete = existing
         .map((row) => row.agentId)
         .filter((id) => !targetIds.has(id));
@@ -412,6 +443,16 @@ export const pgOrganizationRepository: OrganizationRepository = {
   },
 
   async addSharedAgent(organizationId, agentId) {
+    const [agent] = await db
+      .select({ visibility: AgentSchema.visibility })
+      .from(AgentSchema)
+      .where(eq(AgentSchema.id, agentId))
+      .limit(1);
+
+    if (!agent || agent.visibility === "private") {
+      throw new Error("Cannot share private agents");
+    }
+
     await db
       .insert(OrganizationAgentSchema)
       .values({

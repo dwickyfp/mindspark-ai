@@ -228,6 +228,11 @@ export default function OrganizationDashboard() {
 
   const handleToggleAgentShare = async (agentId: string, checked: boolean) => {
     if (!selectedOrganizationId) return;
+    const agent = personalAgents.find((item) => item.id === agentId);
+    if (agent?.visibility === "private") {
+      toast.error(t("privateAgentsCannotBeShared"));
+      return;
+    }
     const previous = sharedAgentIds;
     const next = checked
       ? Array.from(new Set([...sharedAgentIds, agentId]))
@@ -579,19 +584,24 @@ export default function OrganizationDashboard() {
                   ) : (
                     <div className="space-y-2">
                       {personalAgents.map((agent) => {
-                        const checked = sharedAgentIds.includes(agent.id);
+                        const isShareable = agent.visibility !== "private";
+                        const checked =
+                          isShareable && sharedAgentIds.includes(agent.id);
                         return (
                           <div
                             key={agent.id}
                             className={cn(
                               "flex items-start gap-3 rounded-md border p-3",
                               checked && "border-primary/60 bg-primary/5",
+                              !isShareable && "opacity-75",
                             )}
                           >
                             <Checkbox
                               id={`agent-${agent.id}`}
                               checked={checked}
-                              disabled={isUpdatingAgentShares}
+                              disabled={
+                                isUpdatingAgentShares || !isShareable
+                              }
                               onCheckedChange={(value) =>
                                 handleToggleAgentShare(agent.id, value === true)
                               }
@@ -613,6 +623,11 @@ export default function OrganizationDashboard() {
                                 <p className="text-xs text-muted-foreground">
                                   {t("agentSharedDescription")}
                                 </p>
+                                {!isShareable && (
+                                  <p className="text-xs text-destructive">
+                                    {t("privateAgentsCannotBeShared")}
+                                  </p>
+                                )}
                               </div>
                               {checked ? (
                                 <Badge variant="secondary" className="shrink-0">
