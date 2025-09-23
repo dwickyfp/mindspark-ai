@@ -42,6 +42,12 @@ import dynamic from "next/dynamic";
 import { useMounted } from "@/hooks/use-mounted";
 import { getStorageManager } from "lib/browser-stroage";
 import { AnimatePresence, motion } from "framer-motion";
+import { AttachmentPreview } from "./attachment-preview";
+import type {
+  AttachmentSelection,
+  FileAttachmentPart,
+  SelectedAttachment,
+} from "@/types/chat-attachments";
 
 type Props = {
   threadId: string;
@@ -164,6 +170,41 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     experimental_throttle: 100,
     onFinish,
   });
+
+  const [selectedAttachmentLocation, setSelectedAttachmentLocation] =
+    useState<AttachmentSelection | null>(null);
+
+  const selectedAttachment = useMemo<SelectedAttachment | null>(() => {
+    if (!selectedAttachmentLocation) return null;
+    const { messageId, partIndex } = selectedAttachmentLocation;
+    const message = messages.find((m) => m.id === messageId);
+    if (!message) return null;
+    const part = message.parts?.[partIndex];
+    if (!part || part.type !== "file") return null;
+    const filePart = part as FileAttachmentPart;
+    return {
+      message,
+      part: filePart,
+      messageId,
+      partIndex,
+    };
+  }, [selectedAttachmentLocation, messages]);
+
+  const handleAttachmentPreview = useCallback(
+    ({ messageId, partIndex }: AttachmentSelection) => {
+      setSelectedAttachmentLocation((current) => {
+        if (current?.messageId === messageId && current.partIndex === partIndex) {
+          return null;
+        }
+        return { messageId, partIndex };
+      });
+    },
+    [],
+  );
+
+  const closeAttachmentPreview = useCallback(() => {
+    setSelectedAttachmentLocation(null);
+  }, []);
   const [isDeleteThreadPopupOpen, setIsDeleteThreadPopupOpen] = useState(false);
 
   const addToolResult = useCallback(
@@ -347,91 +388,98 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
   return (
     <>
       {particle}
-      <div
-        className={cn(
-          emptyMessage && "justify-center pb-24",
-          "flex flex-col min-w-0 relative h-full z-40",
-        )}
-      >
-        {emptyMessage ? (
-          <ChatGreeting />
-        ) : (
-          <>
-            <div
-              className={"flex flex-col gap-2 overflow-y-auto py-6 z-10"}
-              ref={containerRef}
-              onScroll={handleScroll}
-            >
-              {messages.map((message, index) => {
-                const isLastMessage = messages.length - 1 === index;
-                return (
-                  <PreviewMessage
-                    threadId={threadId}
-                    messageIndex={index}
-                    prevMessage={messages[index - 1]}
-                    key={message.id}
-                    message={message}
-                    status={status}
-                    addToolResult={addToolResult}
-                    isLoading={isLoading || isPendingToolCall}
-                    isLastMessage={isLastMessage}
-                    setMessages={setMessages}
-                    sendMessage={sendMessage}
-                    className={
-                      isLastMessage &&
-                      message.role != "user" &&
-                      !space &&
-                      message.parts.length > 1
-                        ? "min-h-[calc(55dvh-40px)]"
-                        : ""
-                    }
-                  />
-                );
-              })}
-              {space && (
-                <>
-                  <div className="w-full mx-auto max-w-3xl px-6 relative">
-                    <div className={space == "space" ? "opacity-0" : ""}>
-                      <Think />
-                    </div>
-                  </div>
-                  <div className="min-h-[calc(55dvh-56px)]" />
-                </>
-              )}
-
-              {error && <ErrorMessage error={error} />}
-              <div className="min-w-0 min-h-52" />
-            </div>
-          </>
-        )}
-
+      <div className="relative flex h-full w-full lg:gap-4">
         <div
-          className={clsx(
-            messages.length && "absolute bottom-14",
-            "w-full z-10",
+          className={cn(
+            emptyMessage && "justify-center pb-24",
+            "relative z-40 flex min-w-0 flex-1 flex-col h-full",
           )}
         >
-          <div className="max-w-3xl mx-auto relative flex justify-center items-center -top-2">
-            <ScrollToBottomButton
-              show={!isAtBottom && messages.length > 0}
-              onClick={scrollToBottom}
+          {emptyMessage ? (
+            <ChatGreeting />
+          ) : (
+            <>
+              <div
+                className="flex flex-col gap-2 overflow-y-auto py-6 z-10"
+                ref={containerRef}
+                onScroll={handleScroll}
+              >
+                {messages.map((message, index) => {
+                  const isLastMessage = messages.length - 1 === index;
+                  return (
+                    <PreviewMessage
+                      threadId={threadId}
+                      messageIndex={index}
+                      prevMessage={messages[index - 1]}
+                      key={message.id}
+                      message={message}
+                      status={status}
+                      addToolResult={addToolResult}
+                      isLoading={isLoading || isPendingToolCall}
+                      isLastMessage={isLastMessage}
+                      setMessages={setMessages}
+                      sendMessage={sendMessage}
+                      onAttachmentPreview={handleAttachmentPreview}
+                      selectedAttachment={selectedAttachmentLocation}
+                      className={
+                        isLastMessage &&
+                        message.role != "user" &&
+                        !space &&
+                        message.parts.length > 1
+                          ? "min-h-[calc(55dvh-40px)]"
+                          : ""
+                      }
+                    />
+                  );
+                })}
+                {space && (
+                  <>
+                    <div className="w-full mx-auto max-w-3xl px-6 relative">
+                      <div className={space == "space" ? "opacity-0" : ""}>
+                        <Think />
+                      </div>
+                    </div>
+                    <div className="min-h-[calc(55dvh-56px)]" />
+                  </>
+                )}
+                {error && <ErrorMessage error={error} />}
+                <div className="min-w-0 min-h-52" />
+              </div>
+            </>
+          )}
+
+          <div
+            className={clsx(
+              messages.length && "absolute bottom-14",
+              "w-full z-10",
+            )}
+          >
+            <div className="max-w-3xl mx-auto relative flex justify-center items-center -top-2">
+              <ScrollToBottomButton
+                show={!isAtBottom && messages.length > 0}
+                onClick={scrollToBottom}
+              />
+            </div>
+
+            <PromptInput
+              input={input}
+              threadId={threadId}
+              sendMessage={sendMessage}
+              setInput={setInput}
+              isLoading={isLoading || isPendingToolCall}
+              onStop={stop}
+              onFocus={isFirstTime ? undefined : handleFocus}
             />
           </div>
-
-          <PromptInput
-            input={input}
+          <DeleteThreadPopup
             threadId={threadId}
-            sendMessage={sendMessage}
-            setInput={setInput}
-            isLoading={isLoading || isPendingToolCall}
-            onStop={stop}
-            onFocus={isFirstTime ? undefined : handleFocus}
+            onClose={() => setIsDeleteThreadPopupOpen(false)}
+            open={isDeleteThreadPopupOpen}
           />
         </div>
-        <DeleteThreadPopup
-          threadId={threadId}
-          onClose={() => setIsDeleteThreadPopupOpen(false)}
-          open={isDeleteThreadPopupOpen}
+        <AttachmentPreview
+          attachment={selectedAttachment}
+          onClose={closeAttachmentPreview}
         />
       </div>
     </>
