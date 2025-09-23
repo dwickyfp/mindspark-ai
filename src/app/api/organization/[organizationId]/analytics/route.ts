@@ -20,10 +20,16 @@ export async function GET(
   const members = await organizationRepository.listMembers(organizationId);
   const userIds = members.map((member) => member.userId);
 
-  const [modelAggregates, tokenTotals, toolAggregates] = await Promise.all([
+  const [
+    modelAggregates,
+    tokenTotals,
+    toolAggregates,
+    agentUsage,
+  ] = await Promise.all([
     usageLogRepository.getModelUsageAggregatesForUsers(userIds),
     usageLogRepository.getTokenUsageTotalsForUsers(userIds),
     usageLogRepository.getToolUsageAggregatesForUsers(userIds),
+    usageLogRepository.getAgentUsageForUsers(userIds),
   ]);
 
   return NextResponse.json({
@@ -31,5 +37,6 @@ export async function GET(
     popularModels: modelAggregates,
     favoriteTools: toolAggregates,
     members: members.length,
+    agentUsage,
   });
 }

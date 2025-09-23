@@ -40,6 +40,12 @@ import {
   SelectValue,
 } from "ui/select";
 import { Checkbox } from "ui/checkbox";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "ui/tabs";
 import { cn } from "lib/utils";
 import { Trash2, XIcon } from "lucide-react";
 import { deleteOrganizationAction } from "@/app/api/organization/[organizationId]/actions";
@@ -57,7 +63,18 @@ function formatTokens(formatter: Intl.NumberFormat, value?: number) {
 
 export default function OrganizationDashboard() {
   const t = useTranslations("Organization");
+  const tAgent = useTranslations("Agent");
   const numberFormatter = useMemo(() => new Intl.NumberFormat(), []);
+  const dateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }),
+    [],
+  );
+
+  const toDate = (value: string | Date | null | undefined) => {
+    if (!value) return undefined;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+  };
   const newOrganizationDescription = useMemo(() => {
     // Gracefully handle locales that may not yet include this copy
     if (
@@ -141,6 +158,26 @@ export default function OrganizationDashboard() {
     if (!mcpServers) return [];
     return mcpServers.filter((server) => server.scope === "personal");
   }, [mcpServers]);
+
+  const sharedMcpServersDetail = useMemo(
+    () =>
+      (organizationDetail?.sharedMcpServers ?? []).map((server) => ({
+        ...server,
+        createdAt: toDate(server.createdAt),
+      })),
+    [organizationDetail?.sharedMcpServers],
+  );
+  const sharedAgentsDetail = useMemo(
+    () =>
+      (organizationDetail?.sharedAgents ?? []).map((agent) => ({
+        ...agent,
+        sharedAt: toDate(agent.sharedAt),
+      })),
+    [organizationDetail?.sharedAgents],
+  );
+  const agentUsageSummary = analytics?.agentUsage;
+  const agentUsageTotal = agentUsageSummary?.totalInteractions ?? 0;
+  const topAgentUsage = agentUsageSummary?.topAgents ?? [];
 
   const handleCreateOrganization = async () => {
     if (!newOrganizationName.trim()) {
@@ -382,350 +419,495 @@ export default function OrganizationDashboard() {
             </CardContent>
           </Card>
         ) : organizationDetail ? (
-          <ScrollArea className="h-full pr-4">
-            <div className="flex flex-col gap-6 pb-6">
-              <Card>
-                <CardHeader className="flex flex-row items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <CardTitle className="text-xl font-semibold">
-                      {organizationDetail.organization.name}
-                    </CardTitle>
-                    <p className="text-muted-foreground text-sm">
-                      {t("membershipRole", {
-                        role: t(
-                          `role.${organizationDetail.membership.role}` as const,
-                        ),
-                      })}
-                    </p>
-                  </div>
-                  {organizationDetail.membership.role === "owner" && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="-mr-1"
-                      disabled={isDeletingOrganization}
-                      onClick={() =>
-                        handleDeleteOrganization(
-                          organizationDetail.organization.id,
-                        )
-                      }
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                      <span className="sr-only">{t("deleteOrganization")}</span>
-                    </Button>
-                  )}
-                </CardHeader>
-              </Card>
+          <div className="flex h-full flex-col">
+            <Card className="mb-4">
+              <CardHeader className="flex flex-row items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <CardTitle className="text-xl font-semibold">
+                    {organizationDetail.organization.name}
+                  </CardTitle>
+                  <p className="text-muted-foreground text-sm">
+                    {t("membershipRole", {
+                      role: t(
+                        `role.${organizationDetail.membership.role}` as const,
+                      ),
+                    })}
+                  </p>
+                </div>
+                {organizationDetail.membership.role === "owner" && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="-mr-1"
+                    disabled={isDeletingOrganization}
+                    onClick={() =>
+                      handleDeleteOrganization(organizationDetail.organization.id)
+                    }
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <span className="sr-only">{t("deleteOrganization")}</span>
+                  </Button>
+                )}
+              </CardHeader>
+            </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>{t("members")}</CardTitle>
-                  <Badge variant="secondary">
-                    {organizationDetail.members.length} {t("membersCount")}
-                  </Badge>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t("memberName")}</TableHead>
-                        <TableHead>{t("memberEmail")}</TableHead>
-                        <TableHead>{t("memberRole")}</TableHead>
-                        <TableHead className="text-right">
-                          {t("memberActions")}
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {organizationDetail.members.map((member) => (
-                        <TableRow key={member.id}>
-                          <TableCell>
-                            {member.user.name ?? t("unknownUser")}
-                          </TableCell>
-                          <TableCell>{member.user.email}</TableCell>
-                          <TableCell className="capitalize">
-                            {t(`role.${member.role}` as const)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {canManageMembers && member.role !== "owner" ? (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemoveMember(member)}
-                              >
-                                <XIcon className="h-4 w-4" />
-                              </Button>
-                            ) : null}
-                          </TableCell>
+            <Tabs defaultValue="overview" className="flex-1 overflow-hidden">
+            <TabsList className="mb-4 flex-wrap">
+              <TabsTrigger value="overview">{t("tabOverview")}</TabsTrigger>
+              <TabsTrigger value="analytics">{t("tabAnalytics")}</TabsTrigger>
+              <TabsTrigger value="shared">{t("tabSharedAssets")}</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="h-full overflow-auto pr-4">
+              <div className="flex flex-col gap-6 pb-6">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>{t("members")}</CardTitle>
+                    <Badge variant="secondary">
+                      {organizationDetail.members.length} {t("membersCount")}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t("memberName")}</TableHead>
+                          <TableHead>{t("memberEmail")}</TableHead>
+                          <TableHead>{t("memberRole")}</TableHead>
+                          <TableHead className="text-right">
+                            {t("memberActions")}
+                          </TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {organizationDetail.members.map((member) => {
+                          const canRemove =
+                            canManageMembers &&
+                            member.role !== "owner" &&
+                            member.userId !== organizationDetail.membership.userId;
+                          return (
+                            <TableRow key={member.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="size-8">
+                                    <AvatarImage src={member.user.image ?? undefined} />
+                                    <AvatarFallback>
+                                      {member.user.name[0]?.toUpperCase() ?? "?"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="space-y-1">
+                                    <p className="text-sm font-medium">
+                                      {member.user.name || t("unknownUser")}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {member.user.email}
+                                    </p>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>{member.user.email}</TableCell>
+                              <TableCell className="capitalize">
+                                {t(`role.${member.role}` as const)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {canRemove ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleRemoveMember(member)}
+                                  >
+                                    <XIcon className="h-4 w-4" />
+                                  </Button>
+                                ) : (
+                                  <Badge variant="outline">
+                                    {t(`role.${member.role}` as const)}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
 
-                  {canManageMembers ? (
-                    <div className="grid gap-3 rounded-md border p-4">
-                      <h3 className="font-medium text-sm">
-                        {t("inviteMember")}
-                      </h3>
-                      <div className="grid gap-2 md:grid-cols-2">
-                        <div className="grid gap-1">
-                          <Label htmlFor="invite-email">
-                            {t("memberEmail")}
-                          </Label>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t("inviteMember")}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {canManageMembers ? (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="invite-email">{t("memberEmail")}</Label>
                           <Input
                             id="invite-email"
                             type="email"
                             value={inviteEmail}
-                            onChange={(event) =>
-                              setInviteEmail(event.target.value)
-                            }
                             placeholder="name@example.com"
+                            onChange={(event) => setInviteEmail(event.target.value)}
                           />
                         </div>
-                        <div className="grid gap-1">
+                        <div className="space-y-2">
                           <Label htmlFor="invite-role">{t("memberRole")}</Label>
                           <Select
                             value={inviteRole}
-                            onValueChange={(value: OrganizationRole) =>
-                              setInviteRole(value)
-                            }
+                            onValueChange={(value: OrganizationRole) => setInviteRole(value)}
                           >
                             <SelectTrigger id="invite-role">
                               <SelectValue placeholder={t("memberRole")} />
                             </SelectTrigger>
                             <SelectContent>
                               {ROLE_OPTIONS.map((role) => (
-                                <SelectItem
-                                  key={role}
-                                  value={role}
-                                  className="capitalize"
-                                >
+                                <SelectItem key={role} value={role} className="capitalize">
                                   {t(`role.${role}` as const)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
+                        <div className="md:col-span-2">
+                          <Button
+                            className="w-full md:w-auto"
+                            onClick={handleInviteMember}
+                            disabled={isInviting || !inviteEmail.trim()}
+                          >
+                            {isInviting ? t("inviting") : t("invite")}
+                          </Button>
+                        </div>
                       </div>
-                      <Button
-                        onClick={handleInviteMember}
-                        disabled={isInviting || !inviteEmail.trim()}
-                      >
-                        {isInviting ? t("inviting") : t("invite")}
-                      </Button>
-                    </div>
-                  ) : null}
-                </CardContent>
-              </Card>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        {t("inviteMembersDisabled")}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t("sharedMcpServers")}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {personalMcpServers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      {t("noPersonalMcpServers")}
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {personalMcpServers.map((server) => {
-                        const checked = sharedServerIds.includes(server.id);
-                        return (
-                          <div
-                            key={server.id}
-                            className={cn(
-                              "flex items-start gap-3 rounded-md border p-3",
-                              checked && "border-primary/60 bg-primary/5",
-                            )}
-                          >
-                            <Checkbox
-                              id={`mcp-${server.id}`}
-                              checked={checked}
-                              disabled={isUpdatingMcpShares}
-                              onCheckedChange={(value) =>
-                                handleToggleShare(server.id, value === true)
-                              }
-                            />
-                            <div className="space-y-1">
-                              <Label
-                                htmlFor={`mcp-${server.id}`}
-                                className="cursor-pointer"
-                              >
-                                {server.name}
-                              </Label>
-                              <p className="text-xs text-muted-foreground">
-                                {t("mcpServerSharedDescription")}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t("sharedAgents")}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {isAgentsLoading ? (
-                    <div className="space-y-2">
-                      {[...Array(2)].map((_, index) => (
-                        <Skeleton key={index} className="h-16 w-full" />
-                      ))}
-                    </div>
-                  ) : personalAgents.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      {t("noPersonalAgents")}
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {personalAgents.map((agent) => {
-                        const isShareable = agent.visibility !== "private";
-                        const checked =
-                          isShareable && sharedAgentIds.includes(agent.id);
-                        return (
-                          <div
-                            key={agent.id}
-                            className={cn(
-                              "flex items-start gap-3 rounded-md border p-3",
-                              checked && "border-primary/60 bg-primary/5",
-                              !isShareable && "opacity-75",
-                            )}
-                          >
-                            <Checkbox
-                              id={`agent-${agent.id}`}
-                              checked={checked}
-                              disabled={
-                                isUpdatingAgentShares || !isShareable
-                              }
-                              onCheckedChange={(value) =>
-                                handleToggleAgentShare(agent.id, value === true)
-                              }
-                            />
-                            <div className="flex w-full items-start gap-3">
-                              <Avatar className="size-9">
-                                <AvatarImage src={agent.icon?.value} />
-                                <AvatarFallback>
-                                  {agent.name[0]?.toUpperCase() || "A"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 space-y-1">
-                                <Label
-                                  htmlFor={`agent-${agent.id}`}
-                                  className="cursor-pointer"
-                                >
-                                  {agent.name}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t("sharedMcpServers")}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {personalMcpServers.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        {t("noPersonalMcpServers")}
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {personalMcpServers.map((server) => {
+                          const checked = sharedServerIds.includes(server.id);
+                          return (
+                            <div
+                              key={server.id}
+                              className={cn(
+                                "flex items-start gap-3 rounded-md border p-3",
+                                checked && "border-primary/60 bg-primary/5",
+                              )}
+                            >
+                              <Checkbox
+                                id={`mcp-${server.id}`}
+                                checked={checked}
+                                disabled={isUpdatingMcpShares}
+                                onCheckedChange={(value) =>
+                                  handleToggleShare(server.id, value === true)
+                                }
+                              />
+                              <div className="space-y-1">
+                                <Label htmlFor={`mcp-${server.id}`} className="cursor-pointer">
+                                  {server.name}
                                 </Label>
                                 <p className="text-xs text-muted-foreground">
-                                  {t("agentSharedDescription")}
+                                  {t("mcpServerSharedDescription")}
                                 </p>
-                                {!isShareable && (
-                                  <p className="text-xs text-destructive">
-                                    {t("privateAgentsCannotBeShared")}
-                                  </p>
-                                )}
                               </div>
-                              {checked ? (
-                                <Badge variant="secondary" className="shrink-0">
-                                  {t("sharedWithOrganization")}
-                                </Badge>
-                              ) : null}
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t("usageAnalytics")}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {isAnalyticsLoading ? (
-                    <Skeleton className="h-32 w-full" />
-                  ) : analytics ? (
-                    <div className="space-y-6">
-                      <div className="grid gap-4 md:grid-cols-3">
-                        <TokenStat
-                          label={t("totalTokens")}
-                          value={formatTokens(
-                            numberFormatter,
-                            analytics.totals.totalTokens,
-                          )}
-                        />
-                        <TokenStat
-                          label={t("inputTokens")}
-                          value={formatTokens(
-                            numberFormatter,
-                            analytics.totals.inputTokens,
-                          )}
-                        />
-                        <TokenStat
-                          label={t("outputTokens")}
-                          value={formatTokens(
-                            numberFormatter,
-                            analytics.totals.outputTokens,
-                          )}
-                        />
+                          );
+                        })}
                       </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-                      <div className="grid gap-6 md:grid-cols-2">
-                        <AnalyticsList
-                          title={t("popularModels")}
-                          emptyLabel={t("noAnalyticsData")}
-                          items={analytics.popularModels.map((model) => ({
-                            id: `${model.provider ?? "unknown"}-${model.model ?? "unknown"}`,
-                            label: `${model.provider ?? t("unknown")}/${model.model ?? t("unknown")}`,
-                            value: formatTokens(
-                              numberFormatter,
-                              model.totalTokens,
-                            ),
-                          }))}
-                        />
-                        <AnalyticsList
-                          title={t("favoriteTools")}
-                          emptyLabel={t("noAnalyticsData")}
-                          items={analytics.favoriteTools.map((tool) => ({
-                            id: `${tool.toolSource}-${tool.toolName}-${tool.mcpServerId ?? ""}`,
-                            label:
-                              tool.toolSource === "mcp" && tool.mcpServerName
-                                ? `${tool.mcpServerName} / ${tool.toolName}`
-                                : tool.toolName,
-                            value: formatTokens(
-                              numberFormatter,
-                              tool.invocations,
-                            ),
-                          }))}
-                        />
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t("sharedAgents")}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {isAgentsLoading ? (
+                      <div className="space-y-2">
+                        {[...Array(2)].map((_, index) => (
+                          <Skeleton key={index} className="h-16 w-full" />
+                        ))}
                       </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      {t("noAnalyticsData")}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </ScrollArea>
+                    ) : personalAgents.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        {t("noPersonalAgents")}
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {personalAgents.map((agent) => {
+                          const isShareable = agent.visibility !== "private";
+                          const checked = isShareable && sharedAgentIds.includes(agent.id);
+                          return (
+                            <div
+                              key={agent.id}
+                              className={cn(
+                                "flex items-start gap-3 rounded-md border p-3",
+                                checked && "border-primary/60 bg-primary/5",
+                                !isShareable && "opacity-75",
+                              )}
+                            >
+                              <Checkbox
+                                id={`agent-${agent.id}`}
+                                checked={checked}
+                                disabled={isUpdatingAgentShares || !isShareable}
+                                onCheckedChange={(value) =>
+                                  handleToggleAgentShare(agent.id, value === true)
+                                }
+                              />
+                              <div className="flex w-full items-start gap-3">
+                                <Avatar className="size-9">
+                                  <AvatarImage src={agent.icon?.value} />
+                                  <AvatarFallback>
+                                    {agent.name[0]?.toUpperCase() || "A"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 space-y-1">
+                                  <Label htmlFor={`agent-${agent.id}`} className="cursor-pointer">
+                                    {agent.name}
+                                  </Label>
+                                  <p className="text-xs text-muted-foreground">
+                                    {t("agentSharedDescription")}
+                                  </p>
+                                  {!isShareable && (
+                                    <p className="text-xs text-destructive">
+                                      {t("privateAgentsCannotBeShared")}
+                                    </p>
+                                  )}
+                                </div>
+                                {checked ? (
+                                  <Badge variant="secondary" className="shrink-0">
+                                    {t("sharedWithOrganization")}
+                                  </Badge>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="analytics" className="h-full overflow-auto pr-4">
+              <div className="flex flex-col gap-6 pb-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t("usageAnalytics")}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {isAnalyticsLoading ? (
+                      <Skeleton className="h-32 w-full" />
+                    ) : analytics ? (
+                      <div className="space-y-6">
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                          <TokenStat
+                            label={t("totalTokens")}
+                            value={formatTokens(numberFormatter, analytics.totals.totalTokens)}
+                          />
+                          <TokenStat
+                            label={t("inputTokens")}
+                            value={formatTokens(numberFormatter, analytics.totals.inputTokens)}
+                          />
+                          <TokenStat
+                            label={t("outputTokens")}
+                            value={formatTokens(numberFormatter, analytics.totals.outputTokens)}
+                          />
+                          <TokenStat
+                            label={t("analyticsAgentUsageTitle")}
+                            value={numberFormatter.format(agentUsageTotal)}
+                            helper={t("analyticsAgentUsageDescription")}
+                          />
+                        </div>
+
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                          <AnalyticsList
+                            title={t("popularModels")}
+                            emptyLabel={t("noAnalyticsData")}
+                            items={analytics.popularModels.map((model) => ({
+                              id: `${model.provider ?? "unknown"}-${model.model ?? "unknown"}`,
+                              label: `${model.provider ?? t("unknown")}/${model.model ?? t("unknown")}`,
+                              value: formatTokens(numberFormatter, model.totalTokens),
+                            }))}
+                          />
+                          <AnalyticsList
+                            title={t("favoriteTools")}
+                            emptyLabel={t("noAnalyticsData")}
+                            items={analytics.favoriteTools.map((tool) => ({
+                              id: `${tool.toolSource}-${tool.toolName}-${tool.mcpServerId ?? ""}`,
+                              label:
+                                tool.toolSource === "mcp" && tool.mcpServerName
+                                  ? `${tool.mcpServerName} / ${tool.toolName}`
+                                  : tool.toolName,
+                              value: numberFormatter.format(tool.invocations),
+                            }))}
+                          />
+                          <AnalyticsList
+                            title={t("agentUsageListTitle")}
+                            emptyLabel={t("agentUsageListEmpty")}
+                            items={topAgentUsage.map((agent) => ({
+                              id: agent.agentId,
+                              label: agent.agentName
+                                ? agent.agentName
+                                : t("unknown"),
+                              value: t("agentUsageRuns", { count: agent.usageCount }),
+                            }))}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        {t("noAnalyticsData")}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="shared" className="h-full overflow-auto pr-4">
+              <div className="flex flex-col gap-6 pb-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t("sharedToolsListTitle")}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {sharedMcpServersDetail.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        {t("noSharedTools")}
+                      </p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t("toolsTableName")}</TableHead>
+                            <TableHead>{t("toolsTableOwner")}</TableHead>
+                            <TableHead>{t("toolsTableSharedOn")}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sharedMcpServersDetail.map((server) => (
+                            <TableRow key={server.id}>
+                              <TableCell className="font-medium">{server.name}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="size-8">
+                                    <AvatarImage src={server.ownerAvatar ?? undefined} />
+                                    <AvatarFallback>
+                                      {server.ownerName?.[0]?.toUpperCase() ?? "?"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-sm">
+                                    {server.ownerName ?? t("sharedByUnknown")}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {server.createdAt
+                                  ? dateFormatter.format(server.createdAt)
+                                  : t("unknown")}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t("sharedAgentsListTitle")}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {sharedAgentsDetail.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        {t("noSharedAgentsList")}
+                      </p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t("agentsTableName")}</TableHead>
+                            <TableHead>{t("agentsTableOwner")}</TableHead>
+                            <TableHead>{t("agentsTableVisibility")}</TableHead>
+                            <TableHead>{t("agentsTableSharedOn")}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {sharedAgentsDetail.map((agent) => {
+                            const visibilityKey =
+                              agent.visibility === "readonly" ? "readOnly" : agent.visibility;
+                            return (
+                              <TableRow key={agent.id}>
+                                <TableCell className="font-medium">{agent.name}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="size-8">
+                                      <AvatarImage src={agent.userAvatar ?? undefined} />
+                                      <AvatarFallback>
+                                        {agent.userName?.[0]?.toUpperCase() ?? "?"}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-sm">
+                                      {agent.userName ?? t("sharedByUnknown")}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>{tAgent(visibilityKey)}</TableCell>
+                                <TableCell>
+                                  {agent.sharedAt
+                                    ? dateFormatter.format(agent.sharedAt)
+                                    : t("unknown")}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
+          </div>
         ) : null}
       </div>
     </div>
   );
 }
 
-function TokenStat({ label, value }: { label: string; value: string }) {
+function TokenStat({
+  label,
+  value,
+  helper,
+}: {
+  label: string;
+  value: string;
+  helper?: string;
+}) {
   return (
     <div className="rounded-md border p-4">
       <p className="text-sm text-muted-foreground">{label}</p>
       <p className="text-2xl font-semibold">{value}</p>
+      {helper ? (
+        <p className="text-xs text-muted-foreground mt-1">{helper}</p>
+      ) : null}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { User } from "./user";
+import { AgentSummary } from "./agent";
 
 export const OrganizationRoleEnum = z.union([
   z.literal("owner"),
@@ -38,6 +39,19 @@ export type OrganizationWithMembers = Organization & {
   members: OrganizationMemberWithUser[];
 };
 
+export type OrganizationSharedMcpServer = {
+  id: string;
+  name: string;
+  ownerUserId?: string | null;
+  ownerName?: string | null;
+  ownerAvatar?: string | null;
+  createdAt: Date;
+};
+
+export type OrganizationSharedAgent = AgentSummary & {
+  sharedAt: Date;
+};
+
 export type OrganizationRepository = {
   createOrganization: (
     input: OrganizationCreateInput,
@@ -69,6 +83,9 @@ export type OrganizationRepository = {
     userId: string,
   ) => Promise<OrganizationMember | null>;
   listSharedMcpServerIds: (organizationId: string) => Promise<string[]>;
+  listSharedMcpServersWithDetails: (
+    organizationId: string,
+  ) => Promise<OrganizationSharedMcpServer[]>;
   setSharedMcpServerIds: (
     organizationId: string,
     serverIds: string[],
@@ -82,6 +99,9 @@ export type OrganizationRepository = {
     serverId: string,
   ) => Promise<void>;
   listSharedAgentIds: (organizationId: string) => Promise<string[]>;
+  listSharedAgentsWithDetails: (
+    organizationId: string,
+  ) => Promise<OrganizationSharedAgent[]>;
   setSharedAgentIds: (
     organizationId: string,
     agentIds: string[],

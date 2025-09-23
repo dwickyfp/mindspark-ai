@@ -6,6 +6,7 @@ import {
   OrganizationAgentSchema,
   OrganizationSchema,
   UserSchema,
+  McpServerSchema,
 } from "../schema.pg";
 import {
   OrganizationCreateInput,
@@ -13,8 +14,10 @@ import {
   OrganizationRepository,
   OrganizationRole,
   OrganizationWithMembershipRole,
+  OrganizationSharedMcpServer,
+  OrganizationSharedAgent,
 } from "app-types/organization";
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { generateUUID } from "lib/utils";
 
 function slugify(input: string): string {
@@ -277,6 +280,37 @@ export const pgOrganizationRepository: OrganizationRepository = {
     return rows.map((row) => row.serverId);
   },
 
+  async listSharedMcpServersWithDetails(
+    organizationId,
+  ): Promise<OrganizationSharedMcpServer[]> {
+    const rows = await db
+      .select({
+        id: OrganizationMcpServerSchema.mcpServerId,
+        name: McpServerSchema.name,
+        ownerUserId: McpServerSchema.ownerUserId,
+        ownerName: UserSchema.name,
+        ownerAvatar: UserSchema.image,
+        createdAt: OrganizationMcpServerSchema.createdAt,
+      })
+      .from(OrganizationMcpServerSchema)
+      .innerJoin(
+        McpServerSchema,
+        eq(OrganizationMcpServerSchema.mcpServerId, McpServerSchema.id),
+      )
+      .leftJoin(UserSchema, eq(McpServerSchema.ownerUserId, UserSchema.id))
+      .where(eq(OrganizationMcpServerSchema.organizationId, organizationId))
+      .orderBy(desc(OrganizationMcpServerSchema.createdAt));
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      ownerUserId: row.ownerUserId ?? undefined,
+      ownerName: row.ownerName ?? undefined,
+      ownerAvatar: row.ownerAvatar ?? undefined,
+      createdAt: row.createdAt,
+    }));
+  },
+
   async setSharedMcpServerIds(organizationId, serverIds) {
     await db.transaction(async (tx) => {
       const existing = await tx
@@ -375,6 +409,50 @@ export const pgOrganizationRepository: OrganizationRepository = {
         ),
       );
     return rows.map((row) => row.agentId);
+  },
+
+  async listSharedAgentsWithDetails(
+    organizationId,
+  ): Promise<OrganizationSharedAgent[]> {
+    const rows = await db
+      .select({
+        id: AgentSchema.id,
+        name: AgentSchema.name,
+        description: AgentSchema.description,
+        icon: AgentSchema.icon,
+        userId: AgentSchema.userId,
+        visibility: AgentSchema.visibility,
+        createdAt: AgentSchema.createdAt,
+        updatedAt: AgentSchema.updatedAt,
+        userName: UserSchema.name,
+        userAvatar: UserSchema.image,
+        sharedAt: OrganizationAgentSchema.createdAt,
+      })
+      .from(OrganizationAgentSchema)
+      .innerJoin(AgentSchema, eq(OrganizationAgentSchema.agentId, AgentSchema.id))
+      .innerJoin(UserSchema, eq(AgentSchema.userId, UserSchema.id))
+      .where(
+        and(
+          eq(OrganizationAgentSchema.organizationId, organizationId),
+          or(
+            eq(AgentSchema.visibility, "public"),
+            eq(AgentSchema.visibility, "readonly"),
+          ),
+        ),
+      )
+      .orderBy(desc(OrganizationAgentSchema.createdAt));
+
+    return rows.map((row) => ({
+      ...row,
+      description: row.description ?? undefined,
+      icon: row.icon ?? undefined,
+      userName: row.userName ?? undefined,
+      userAvatar: row.userAvatar ?? undefined,
+      sharedOrganizations: [],
+      scope: "organization",
+      organizationId,
+      sharedAt: row.sharedAt,
+    }));
   },
 
   async setSharedAgentIds(organizationId, agentIds) {

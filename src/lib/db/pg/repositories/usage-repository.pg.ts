@@ -1,5 +1,12 @@
 import { pgDb as db } from "../db.pg";
-import { ModelUsageLogSchema, ToolUsageLogSchema } from "../schema.pg";
+import {
+  AgentSchema,
+  ChatMessageSchema,
+  ChatThreadSchema,
+  ModelUsageLogSchema,
+  ToolUsageLogSchema,
+  UserSchema,
+} from "../schema.pg";
 import {
   ModelUsageAggregate,
   ModelUsageLogInsert,
@@ -7,8 +14,9 @@ import {
   ToolUsageAggregate,
   ToolUsageLogInsert,
   UsageLogRepository,
+  AgentUsageAnalytics,
 } from "app-types/analytics";
-import { desc, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
 export const pgUsageLogRepository: UsageLogRepository = {
   async upsertModelUsage(log: ModelUsageLogInsert) {
@@ -135,5 +143,65 @@ export const pgUsageLogRepository: UsageLogRepository = {
       .orderBy(desc(sql`COALESCE(COUNT(*), 0)`));
 
     return rows as ToolUsageAggregate[];
+  },
+
+  async getAgentUsageForUsers(userIds: string[]) {
+    if (userIds.length === 0) {
+      return { totalInteractions: 0, topAgents: [] } satisfies AgentUsageAnalytics;
+    }
+
+    const agentIdExpr = sql<string>`(${ChatMessageSchema.metadata} ->> 'agentId')`;
+    const agentIdUuidExpr = sql`(${ChatMessageSchema.metadata} ->> 'agentId')::uuid`;
+
+    const rows = await db
+      .select({
+        agentId: agentIdExpr,
+        usageCount: sql<number>`COUNT(*)`,
+        agentName: AgentSchema.name,
+        ownerUserId: AgentSchema.userId,
+        ownerName: UserSchema.name,
+        ownerAvatar: UserSchema.image,
+      })
+      .from(ChatMessageSchema)
+      .innerJoin(
+        ChatThreadSchema,
+        eq(ChatMessageSchema.threadId, ChatThreadSchema.id),
+      )
+      .leftJoin(AgentSchema, sql`${AgentSchema.id} = ${agentIdUuidExpr}`)
+      .leftJoin(UserSchema, eq(UserSchema.id, AgentSchema.userId))
+      .where(
+        and(
+          inArray(ChatThreadSchema.userId, userIds),
+          sql`${agentIdExpr} IS NOT NULL`,
+        ),
+      )
+      .groupBy(
+        agentIdExpr,
+        AgentSchema.id,
+        AgentSchema.name,
+        AgentSchema.userId,
+        UserSchema.id,
+        UserSchema.name,
+        UserSchema.image,
+      )
+      .orderBy(desc(sql`COUNT(*)`));
+
+    const topAgents = rows
+      .filter((row) => row.agentId)
+      .map((row) => ({
+        agentId: row.agentId,
+        agentName: row.agentName ?? null,
+        ownerUserId: row.ownerUserId ?? null,
+        ownerName: row.ownerName ?? null,
+        ownerAvatar: row.ownerAvatar ?? null,
+        usageCount: Number(row.usageCount ?? 0),
+      }));
+
+    const totalInteractions = topAgents.reduce(
+      (sum, item) => sum + item.usageCount,
+      0,
+    );
+
+    return { totalInteractions, topAgents } satisfies AgentUsageAnalytics;
   },
 };

@@ -37,6 +37,20 @@ export type ToolUsageAggregate = {
   mcpServerName?: string | null;
 };
 
+export type AgentUsageAggregate = {
+  agentId: string;
+  agentName?: string | null;
+  ownerUserId?: string | null;
+  ownerName?: string | null;
+  ownerAvatar?: string | null;
+  usageCount: number;
+};
+
+export type AgentUsageAnalytics = {
+  totalInteractions: number;
+  topAgents: AgentUsageAggregate[];
+};
+
 export type TokenUsageTotals = {
   inputTokens: number;
   outputTokens: number;
@@ -53,4 +67,7 @@ export type UsageLogRepository = {
   getToolUsageAggregatesForUsers: (
     userIds: string[],
   ) => Promise<ToolUsageAggregate[]>;
+  getAgentUsageForUsers: (
+    userIds: string[],
+  ) => Promise<AgentUsageAnalytics>;
 };

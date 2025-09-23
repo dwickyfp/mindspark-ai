@@ -1,6 +1,7 @@
 "use client";
 import useSWR, { SWRConfiguration } from "swr";
 import {
+  AgentUsageAnalytics,
   ModelUsageAggregate,
   TokenUsageTotals,
   ToolUsageAggregate,
@@ -13,6 +14,7 @@ export type OrganizationAnalyticsResponse = {
   popularModels: ModelUsageAggregate[];
   favoriteTools: ToolUsageAggregate[];
   members: number;
+  agentUsage: AgentUsageAnalytics;
 };
 
 export function useOrganizationAnalytics(

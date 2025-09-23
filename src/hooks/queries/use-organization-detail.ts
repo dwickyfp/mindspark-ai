@@ -3,6 +3,8 @@ import useSWR, { SWRConfiguration } from "swr";
 import {
   Organization,
   OrganizationMemberWithUser,
+  OrganizationSharedAgent,
+  OrganizationSharedMcpServer,
 } from "app-types/organization";
 import { fetcher } from "lib/utils";
 import { handleErrorWithToast } from "ui/shared-toast";
@@ -18,7 +20,9 @@ export type OrganizationDetailResponse = {
   };
   members: OrganizationMemberWithUser[];
   sharedMcpServerIds: string[];
+  sharedMcpServers: OrganizationSharedMcpServer[];
   sharedAgentIds: string[];
+  sharedAgents: OrganizationSharedAgent[];
 };
 
 export function useOrganizationDetail(

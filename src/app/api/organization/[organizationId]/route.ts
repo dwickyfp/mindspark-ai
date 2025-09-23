@@ -18,10 +18,18 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const [members, sharedMcpServerIds, sharedAgentIds] = await Promise.all([
+  const [
+    members,
+    sharedMcpServerIds,
+    sharedAgentIds,
+    sharedMcpServers,
+    sharedAgents,
+  ] = await Promise.all([
     organizationRepository.listMembers(organizationId),
     organizationRepository.listSharedMcpServerIds(organizationId),
     organizationRepository.listSharedAgentIds(organizationId),
+    organizationRepository.listSharedMcpServersWithDetails(organizationId),
+    organizationRepository.listSharedAgentsWithDetails(organizationId),
   ]);
 
   return NextResponse.json({
@@ -30,5 +38,7 @@ export async function GET(
     members,
     sharedMcpServerIds,
     sharedAgentIds,
+    sharedMcpServers,
+    sharedAgents,
   });
 }
