@@ -73,6 +73,17 @@
     }
   },
   "Chat": {
+    "Attachments": {
+      "add": "附加文件",
+      "download": "下载",
+      "failedToAttach": "我们无法附加该文件。请再试一次。",
+      "limitReached": "您一次最多可以附加 {count} 个文件。",
+      "remove": "删除附件",
+      "tooLarge": "文件必须小于 {limit}。",
+      "unsupportedType": "此文件类型尚不受支持。",
+      "untitled": "附件",
+      "tooltip": "支持的文件类型：{types} • 每个最大大小 {limit}"
+    },
     "Error": "聊天错误",
     "thisMessageWasNotSavedPleaseTryTheChatAgain": "此消息未保存。请重试聊天。",
     "Greeting": {

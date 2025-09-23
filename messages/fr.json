@@ -72,6 +72,17 @@
     }
   },
   "Chat": {
+    "Attachments": {
+      "add": "Joindre des fichiers",
+      "download": "Télécharger",
+      "failedToAttach": "Nous n'avons pas pu joindre ce fichier. Veuillez réessayer.",
+      "limitReached": "Vous pouvez joindre jusqu'à {count} fichiers à la fois.",
+      "remove": "Supprimer la pièce jointe",
+      "tooLarge": "Les fichiers doivent être inférieurs à {limit}.",
+      "unsupportedType": "Ce type de fichier n'est pas encore pris en charge.",
+      "untitled": "Pièce jointe",
+      "tooltip": "Types de fichiers pris en charge : {types} • Taille max {limit} chacun"
+    },
     "Error": "Erreur de Chat",
     "thisMessageWasNotSavedPleaseTryTheChatAgain": "Ce message n'a pas été enregistré. Veuillez réessayer le chat.",
     "Greeting": {

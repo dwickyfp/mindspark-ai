@@ -11,6 +11,7 @@ import {
   AssistMessagePart,
   ToolMessagePart,
   ReasoningPart,
+  AttachmentMessagePart,
 } from "./message-parts";
 import { ChevronDown, ChevronUp, TriangleAlertIcon } from "lucide-react";
 import { Button } from "ui/button";
@@ -101,6 +102,16 @@ const PurePreviewMessage = ({
                   message={message}
                   setMessages={setMessages}
                   sendMessage={sendMessage}
+                />
+              );
+            }
+
+            if (part.type === "file") {
+              return (
+                <AttachmentMessagePart
+                  key={key}
+                  part={part}
+                  isUser={isUserMessage}
                 />
               );
             }

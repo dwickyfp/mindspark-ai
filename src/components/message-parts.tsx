@@ -15,6 +15,10 @@ import {
   TriangleAlert,
   HammerIcon,
   EllipsisIcon,
+  Download,
+  FileAudio,
+  FileIcon,
+  ImageIcon,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "ui/tooltip";
 import { Button } from "ui/button";
@@ -65,6 +69,7 @@ import { BACKGROUND_COLORS, EMOJI_DATA } from "lib/const";
 type MessagePart = UIMessage["parts"][number];
 type TextMessagePart = Extract<MessagePart, { type: "text" }>;
 type AssistMessagePart = Extract<MessagePart, { type: "text" }>;
+type FileMessagePart = Extract<MessagePart, { type: "file" }>;
 
 interface UserMessagePartProps {
   part: TextMessagePart;
@@ -125,6 +130,12 @@ export const UserMessagePart = memo(
         ? part.text
         : truncateString(part.text, MAX_TEXT_LENGTH);
 
+    const hasAttachment = useMemo(
+      () => message.parts.some((messagePart) => messagePart.type === "file"),
+      [message.parts],
+    );
+    const shouldHighlight = isLast || hasAttachment;
+
     const deleteMessage = useCallback(async () => {
       const ok = await notify.confirm({
         title: "Delete Message",
@@ -174,7 +185,8 @@ export const UserMessagePart = memo(
           className={cn(
             "flex flex-col gap-4 max-w-full ring ring-input relative overflow-hidden",
             {
-              "bg-accent text-accent-foreground px-4 py-3 rounded-2xl": isLast,
+              "bg-accent text-accent-foreground px-4 py-3 rounded-2xl":
+                shouldHighlight,
               "opacity-50": isError,
             },
             isError && "border-destructive border",
@@ -271,6 +283,87 @@ export const UserMessagePart = memo(
     return true;
   },
 );
+
+interface AttachmentMessagePartProps {
+  part: FileMessagePart;
+  isUser: boolean;
+}
+
+export function AttachmentMessagePart({ part, isUser }: AttachmentMessagePartProps) {
+  const t = useTranslations("Chat.Attachments");
+  const filename = part.filename || t("untitled");
+  const isImage = part.mediaType.startsWith("image/");
+  const isAudio = part.mediaType.startsWith("audio/");
+  const data = (part as { data?: string }).data;
+  const downloadUrl = part.url ?? (data ? `data:${part.mediaType};base64,${data}` : undefined);
+  const hasDownload = Boolean(downloadUrl);
+
+  const containerClass = cn(
+    "flex max-w-md flex-col gap-3 rounded-2xl border border-border/60 p-3 shadow-sm",
+    isUser ? "bg-accent text-accent-foreground" : "bg-muted/60",
+  );
+
+  const subtleTextClass = cn(
+    "text-[11px]",
+    isUser ? "text-accent-foreground/80" : "text-muted-foreground",
+  );
+
+  const filenameClass = cn(
+    "truncate text-xs font-semibold",
+    isUser ? "text-accent-foreground" : "text-foreground",
+  );
+
+  const downloadLabel = t("download");
+
+  return (
+    <div className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}>
+      <div className={containerClass}>
+        {isImage && downloadUrl && (
+          <a
+            href={downloadUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="block overflow-hidden rounded-xl border border-border/60"
+          >
+            <img
+              src={downloadUrl}
+              alt={filename}
+              className="max-h-64 w-full object-cover"
+            />
+          </a>
+        )}
+
+        {isAudio && downloadUrl && (
+          <audio controls src={downloadUrl} className="w-full" />
+        )}
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            {!isImage && !isAudio && <FileIcon className="size-4 flex-shrink-0" />}
+            <span className={filenameClass} title={filename}>
+              {filename}
+            </span>
+          </div>
+          {hasDownload && (
+            <a
+              href={downloadUrl}
+              download={part.filename ?? undefined}
+              className="flex items-center gap-1 text-xs font-medium hover:underline"
+            >
+              <Download className="size-3" />
+              {downloadLabel}
+            </a>
+          )}
+        </div>
+        <div className={cn("flex items-center gap-2", subtleTextClass)}>
+          <span className="truncate">{part.mediaType}</span>
+          {isImage && <ImageIcon className="size-3" />}
+          {isAudio && <FileAudio className="size-3" />}
+        </div>
+      </div>
+    </div>
+  );
+}
 UserMessagePart.displayName = "UserMessagePart";
 
 export const AssistMessagePart = memo(function AssistMessagePart({

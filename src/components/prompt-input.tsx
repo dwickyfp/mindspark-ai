@@ -4,13 +4,15 @@ import {
   AudioWaveformIcon,
   ChevronDown,
   CornerRightUp,
+  FileAudio,
+  FileIcon,
+  Loader,
   PlusIcon,
   Square,
   XIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "ui/button";
-import { notImplementedToast } from "ui/shared-toast";
 import { UIMessage, UseChatHelpers } from "@ai-sdk/react";
 import { SelectModel } from "./select-model";
 import { appStore } from "@/app/store";
@@ -36,6 +38,8 @@ import { GeminiIcon } from "ui/gemini-icon";
 
 import { EMOJI_DATA } from "lib/const";
 import { AgentSummary } from "app-types/agent";
+import { toast } from "sonner";
+import { formatFileSize, generateUUID } from "lib/utils";
 
 interface PromptInputProps {
   placeholder?: string;
@@ -84,6 +88,11 @@ export default function PromptInput({
       state.mutate,
     ]),
   );
+
+  const [attachments, setAttachments] = useState<AttachmentPreview[]>([]);
+  const [isPreparing, setIsPreparing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const attachmentsT = useTranslations("Chat.Attachments");
 
   const mentions = useMemo<ChatMention[]>(() => {
     if (!threadId) return [];
@@ -199,20 +208,53 @@ export default function PromptInput({
     [addMention],
   );
 
-  const submit = () => {
-    if (isLoading) return;
-    const userMessage = input?.trim() || "";
-    if (userMessage.length === 0) return;
-    setInput("");
-    sendMessage({
-      role: "user",
-      parts: [
-        {
-          type: "text",
-          text: userMessage,
-        },
-      ],
-    });
+  const hasTypedInput = useMemo(() => input?.trim().length > 0, [input]);
+  const isBusy = isLoading || isPreparing;
+
+  const submit = async () => {
+    if (isBusy) return;
+    const text = input?.trim() || "";
+    if (!text && attachments.length === 0) return;
+
+    setIsPreparing(true);
+    try {
+      const fileParts = attachments.map(
+        (attachment) => ({
+          type: "file" as const,
+          mediaType: attachment.mediaType,
+          filename: attachment.name,
+          url: attachment.dataUrl,
+          data: attachment.base64,
+        }) as UIMessage["parts"][number],
+      );
+
+      const parts: UIMessage["parts"] = [];
+      if (text) {
+        parts.push({ type: "text", text });
+      }
+      parts.push(...fileParts);
+
+      const previousAttachments = attachments;
+      const previousInput = input;
+
+      setInput("");
+      setAttachments([]);
+
+      await sendMessage({
+        role: "user",
+        parts,
+      }).catch((error) => {
+        setInput(previousInput);
+        setAttachments(previousAttachments);
+        console.error(error);
+        toast.error(
+          t("thisMessageWasNotSavedPleaseTryTheChatAgain"),
+        );
+        throw error;
+      });
+    } finally {
+      setIsPreparing(false);
+    }
   };
 
   // Handle ESC key to clear mentions
@@ -238,6 +280,88 @@ export default function PromptInput({
   useEffect(() => {
     if (!editorRef.current) return;
   }, [editorRef.current]);
+
+  useEffect(() => {
+    setAttachments([]);
+  }, [threadId]);
+
+  const handleAttachmentRemove = useCallback((id: string) => {
+    setAttachments((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
+  const handleAttachmentClick = useCallback(() => {
+    if (isBusy) return;
+    if (attachments.length >= MAX_ATTACHMENTS) {
+      toast.warning(
+        attachmentsT("limitReached", { count: MAX_ATTACHMENTS.toString() }),
+      );
+      return;
+    }
+    fileInputRef.current?.click();
+  }, [isBusy, attachments.length, attachmentsT]);
+
+  const handleFiles = useCallback(
+    async (fileList: FileList | null) => {
+      if (!fileList) return;
+      const currentCount = attachments.length;
+      const availableSlots = MAX_ATTACHMENTS - currentCount;
+      if (availableSlots <= 0) {
+        toast.warning(
+          attachmentsT("limitReached", { count: MAX_ATTACHMENTS.toString() }),
+        );
+        return;
+      }
+
+      const files = Array.from(fileList).slice(0, availableSlots);
+      const validFiles = files.filter((file) => {
+        if (!isSupportedFile(file.type)) {
+          toast.error(attachmentsT("unsupportedType"));
+          return false;
+        }
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          toast.error(
+            attachmentsT("tooLarge", {
+              limit: formatFileSize(MAX_FILE_SIZE_BYTES),
+            }),
+          );
+          return false;
+        }
+        return true;
+      });
+
+      if (validFiles.length === 0) return;
+
+      setIsPreparing(true);
+      try {
+        const processed = await Promise.all(
+          validFiles.map(async (file) => {
+            const dataUrl = await toDataUrl(file);
+            const { base64, mediaType } = parseDataUrl(dataUrl, file.type);
+            return {
+              id: generateUUID(),
+              name: file.name,
+              mediaType,
+              size: file.size,
+              dataUrl,
+              base64,
+              previewUrl: mediaType.startsWith("image/") ? dataUrl : undefined,
+            } satisfies AttachmentPreview;
+          }),
+        );
+
+        setAttachments((prev) => [...prev, ...processed]);
+      } catch (error) {
+        console.error(error);
+        toast.error(attachmentsT("failedToAttach"));
+      } finally {
+        setIsPreparing(false);
+      }
+    },
+    [attachments.length, attachmentsT],
+  );
+
+  const showVoiceButton =
+    !isBusy && !hasTypedInput && attachments.length === 0 && !voiceDisabled;
 
   return (
     <div className="max-w-3xl mx-auto fade-in animate-in">
@@ -305,6 +429,14 @@ export default function PromptInput({
               </div>
             )}
             <div className="flex flex-col gap-3.5 px-5 pt-2 pb-4">
+              {attachments.length > 0 && (
+                <AttachmentList
+                  attachments={attachments}
+                  onRemove={handleAttachmentRemove}
+                  isUser
+                  removeLabel={attachmentsT("remove")}
+                />
+              )}
               <div className="relative min-h-[2rem]">
                 <ChatMentionInput
                   input={input}
@@ -318,14 +450,36 @@ export default function PromptInput({
                 />
               </div>
               <div className="flex w-full items-center z-30">
-                <Button
-                  variant={"ghost"}
-                  size={"sm"}
-                  className="rounded-full hover:bg-input! p-2!"
-                  onClick={notImplementedToast}
-                >
-                  <PlusIcon />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={"ghost"}
+                      size={"sm"}
+                      disabled={isBusy || attachments.length >= MAX_ATTACHMENTS}
+                      className="rounded-full hover:bg-input! p-2!"
+                      onClick={handleAttachmentClick}
+                    >
+                      <PlusIcon />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {attachmentsT("tooltip", {
+                      types: SUPPORTED_FILE_TYPE_SUMMARY,
+                      limit: formatFileSize(MAX_FILE_SIZE_BYTES),
+                    })}
+                  </TooltipContent>
+                </Tooltip>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  multiple
+                  accept="image/*,application/pdf,audio/*"
+                  onChange={(event) => {
+                    void handleFiles(event.target.files);
+                    event.target.value = "";
+                  }}
+                />
 
                 {!toolDisabled && (
                   <>
@@ -375,7 +529,7 @@ export default function PromptInput({
                     <ChevronDown className="size-3" />
                   </Button>
                 </SelectModel>
-                {!isLoading && !input.length && !voiceDisabled ? (
+                {showVoiceButton ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -401,8 +555,8 @@ export default function PromptInput({
                     onClick={() => {
                       if (isLoading) {
                         onStop();
-                      } else {
-                        submit();
+                      } else if (!isPreparing) {
+                        void submit();
                       }
                     }}
                     className="fade-in animate-in cursor-pointer text-muted-foreground rounded-full p-2 bg-secondary hover:bg-accent-foreground hover:text-accent transition-all duration-200"
@@ -412,6 +566,8 @@ export default function PromptInput({
                         size={16}
                         className="fill-muted-foreground text-muted-foreground"
                       />
+                    ) : isPreparing ? (
+                      <Loader className="size-4 animate-spin" />
                     ) : (
                       <CornerRightUp size={16} />
                     )}
@@ -422,6 +578,158 @@ export default function PromptInput({
           </div>
         </fieldset>
       </div>
+    </div>
+  );
+}
+
+type AttachmentPreview = {
+  id: string;
+  name: string;
+  mediaType: string;
+  size: number;
+  dataUrl: string;
+  base64: string;
+  previewUrl?: string;
+};
+
+const MAX_ATTACHMENTS = 6;
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
+const GENERIC_IMAGE_PREFIX = "image/";
+const GENERIC_AUDIO_PREFIX = "audio/";
+
+const SUPPORTED_DOCUMENT_MIME_TYPES = new Set([
+  "application/pdf",
+  "text/plain",
+  "text/markdown",
+  "text/csv",
+  "application/json",
+]);
+
+const SUPPORTED_AUDIO_MIME_TYPES = new Set([
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/webm",
+  "audio/ogg",
+  "audio/mp4",
+  "audio/m4a",
+  "audio/wave",
+  "audio/flac",
+]);
+
+const SUPPORTED_FILE_TYPE_SUMMARY =
+  "PNG, JPG, GIF, WebP, PDF, TXT/MD/CSV, JSON, MP3/WAV/M4A";
+
+function isSupportedFile(mediaType: string) {
+  if (!mediaType) return false;
+  const normalized = mediaType.toLowerCase();
+  if (normalized.startsWith(GENERIC_IMAGE_PREFIX)) return true;
+  if (SUPPORTED_AUDIO_MIME_TYPES.has(normalized)) return true;
+  if (normalized.startsWith(GENERIC_AUDIO_PREFIX)) return false;
+  return SUPPORTED_DOCUMENT_MIME_TYPES.has(normalized);
+}
+
+function toDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+function parseDataUrl(dataUrl: string, fallbackType: string) {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (match) {
+    return {
+      mediaType: match[1] || fallbackType || "application/octet-stream",
+      base64: match[2],
+    };
+  }
+  return {
+    mediaType: fallbackType || "application/octet-stream",
+    base64: dataUrl,
+  };
+}
+
+function AttachmentList({
+  attachments,
+  onRemove,
+  isUser,
+  removeLabel,
+}: {
+  attachments: AttachmentPreview[];
+  onRemove: (id: string) => void;
+  isUser?: boolean;
+  removeLabel: string;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {attachments.map((attachment) => (
+        <AttachmentChip
+          key={attachment.id}
+          attachment={attachment}
+          onRemove={() => onRemove(attachment.id)}
+          alignEnd={isUser}
+          removeLabel={removeLabel}
+        />
+      ))}
+    </div>
+  );
+}
+
+function AttachmentChip({
+  attachment,
+  onRemove,
+  alignEnd,
+  removeLabel,
+}: {
+  attachment: AttachmentPreview;
+  onRemove: () => void;
+  alignEnd?: boolean;
+  removeLabel: string;
+}) {
+  const { mediaType, name, size, previewUrl, dataUrl } = attachment;
+  const isImage = mediaType.startsWith("image/");
+  const isAudio = mediaType.startsWith("audio/");
+
+  return (
+    <div
+      className={
+        "flex items-center gap-3 rounded-2xl border border-border bg-background/80 px-3 py-2 shadow-sm" +
+        (alignEnd ? " ml-auto" : "")
+      }
+    >
+      {isImage ? (
+        <div className="size-10 overflow-hidden rounded-xl border border-border">
+          <img
+            src={previewUrl ?? dataUrl}
+            alt={name}
+            className="size-full object-cover"
+          />
+        </div>
+      ) : isAudio ? (
+        <FileAudio className="size-5" />
+      ) : (
+        <FileIcon className="size-5" />
+      )}
+      <div className="min-w-0">
+        <p className="text-xs font-medium truncate max-w-[9rem]">{name}</p>
+        <p className="text-[11px] text-muted-foreground">
+          {formatFileSize(size)}
+        </p>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 text-muted-foreground hover:text-foreground"
+        onClick={onRemove}
+        aria-label={removeLabel}
+      >
+        <XIcon className="size-3.5" />
+      </Button>
     </div>
   );
 }

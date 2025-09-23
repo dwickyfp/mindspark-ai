@@ -5,6 +5,7 @@ Mind Spark is an open-source AI collaboration workspace. It brings chat, shareab
 ## Highlights
 
 - **Multi-provider chat** with OpenAI, Anthropic, Google, Groq, xAI, Ollama, and more
+- **Multimodal prompts** with inline file attachments (images, PDFs, and audio) routed through OpenRouter
 - **Team workspaces** for inviting members, sharing MCP servers, and tracking usage analytics
 - **Drag-and-drop workflows** that mix LLM reasoning with MCP tool execution
 - **Custom agents** that package instructions, toolkits, and presets for specific tasks
@@ -89,7 +90,7 @@ See `.env.example` for the complete list.
 
 ## Roadmap
 
-- [ ] File upload and multimodal responses
+- [x] File upload and multimodal responses
 - [ ] Collaborative document editing and shared canvases
 - [ ] Retrieval-augmented generation with your own knowledge base
 - [ ] WebContainer integration for browser-contained compute
