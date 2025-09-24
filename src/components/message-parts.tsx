@@ -2,6 +2,7 @@
 
 import { getToolName, ToolUIPart, UIMessage } from "ai";
 import {
+  BookOpen,
   Check,
   Copy,
   Loader,
@@ -34,6 +35,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import Image from "next/image";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "ui/hover-card";
 import { MessageEditor } from "./message-editor";
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { useCopy } from "@/hooks/use-copy";
@@ -443,6 +445,39 @@ export const AssistMessagePart = memo(function AssistMessagePart({
     return agentList.find((a) => a.id === metadata?.agentId);
   }, [metadata, agentList]);
 
+  const knowledgeBaseChunks = metadata?.knowledgeBase?.retrievedChunks ?? [];
+  const knowledgeSources = useMemo(() => {
+    if (!knowledgeBaseChunks.length) {
+      return [] as Array<{
+        knowledgeBaseId: string;
+        documentName: string;
+        score: number;
+      }>;
+    }
+
+    const deduped = new Map<
+      string,
+      { knowledgeBaseId: string; documentName: string; score: number }
+    >();
+
+    knowledgeBaseChunks.forEach((chunk, index) => {
+      const knowledgeBaseId = chunk.knowledgeBaseId ?? "unknown";
+      const documentKey = chunk.documentId ?? `${knowledgeBaseId}-${index}`;
+      const key = `${knowledgeBaseId}-${documentKey}`;
+      const documentName = chunk.documentName?.trim() || "Untitled document";
+      const score = typeof chunk.score === "number" ? chunk.score : 0;
+
+      const current = deduped.get(key);
+      if (!current || score > current.score) {
+        deduped.set(key, { knowledgeBaseId, documentName, score });
+      }
+    });
+
+    return Array.from(deduped.values()).sort((a, b) => b.score - a.score);
+  }, [knowledgeBaseChunks]);
+
+  const hasKnowledgeSources = knowledgeSources.length > 0;
+
   const deleteMessage = useCallback(async () => {
     const ok = await notify.confirm({
       title: "Delete Message",
@@ -557,6 +592,57 @@ export const AssistMessagePart = memo(function AssistMessagePart({
               Delete Message
             </TooltipContent>
           </Tooltip>
+          {hasKnowledgeSources && (
+            <HoverCard openDelay={100} closeDelay={100}>
+              <HoverCardTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-3! p-4! transition-opacity duration-300"
+                  aria-label="Knowledge sources"
+                >
+                  <BookOpen />
+                </Button>
+              </HoverCardTrigger>
+              <HoverCardContent align="start" className="w-80 space-y-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-foreground">
+                    Retrieved Sources
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Context pulled from linked knowledge bases to craft this
+                    answer.
+                  </p>
+                </div>
+                <div className="space-y-2 max-h-60 overflow-auto pr-1">
+                  {knowledgeSources.map((source, index) => {
+                    const knowledgeBaseLabel =
+                      source.knowledgeBaseId === "unknown"
+                        ? "Unknown knowledge base"
+                        : `KB ${source.knowledgeBaseId.slice(0, 8)}`;
+                    return (
+                      <div
+                        key={`${source.knowledgeBaseId}-${index}`}
+                        className="rounded-md border border-border/60 bg-muted/40 p-2"
+                      >
+                        <p className="text-xs font-semibold text-foreground">
+                          {source.documentName}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          {knowledgeBaseLabel}
+                          {Number.isFinite(source.score) && (
+                            <span className="ml-2">
+                              Score: {source.score.toFixed(2)}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          )}
           {metadata && (
             <Tooltip>
               <TooltipTrigger asChild>
