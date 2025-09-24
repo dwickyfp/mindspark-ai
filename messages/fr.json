@@ -239,7 +239,7 @@
     "reportAnIssue": "Signaler un problème",
     "joinCommunity": "Rejoindre la Communauté",
     "workflow": "Flux de Travail",
-    "analytics": "Analytics"
+    "analytics": "Analyses"
   },
   "Archive": {
     "title": "Archive",
@@ -340,57 +340,59 @@
     }
   },
   "UserAnalytics": {
-    "title": "Personal analytics",
-    "subtitle": "Track how you use Mind Spark across chats, tools, and models.",
-    "summaryQueriesThisWeek": "Queries this week",
-    "summaryTotalTokens": "Total tokens",
-    "summaryTotalTokensHelper": "Combined input and output tokens",
-    "summaryAverageTokens": "Average tokens per query",
-    "summaryAverageTokensHelper": "All-time average tokens per request",
-    "summaryCurrentStreak": "Active streak",
+    "title": "Analyses personnelles",
+    "subtitle": "Suivez votre utilisation de Mind Spark à travers les chats, outils et modèles.",
+    "summaryQueriesThisWeek": "Requêtes cette semaine",
+    "summaryTotalTokens": "Jetons totaux",
+    "summaryTotalTokensHelper": "Jetons d'entrée et de sortie combinés",
+    "summaryAverageTokens": "Jetons moyens par requête",
+    "summaryAverageTokensHelper": "Moyenne historique des jetons par requête",
+    "summaryCurrentStreak": "Série active",
     "summaryTotalChats": "Conversations",
-    "summaryOrganizations": "Organizations joined",
-    "summaryToolUsage": "Tool runs",
-    "summaryToolUsageHelper": "All-time tool executions",
-    "summaryModelDiversity": "Models used",
-    "weeklyChartTitle": "Weekly activity",
-    "weeklyChartDescription": "Your queries across the last week.",
-    "weeklyChartSeriesLabel": "Queries",
-    "lastDays": "{count, plural, one {Last # day} other {Last # days}}",
-    "tokenBreakdownTitle": "Token breakdown",
-    "tokenBreakdownTotal": "Total tokens",
-    "tokenBreakdownInput": "Input tokens",
-    "tokenBreakdownOutput": "Output tokens",
-    "tokenBreakdownQueries": "Total queries",
-    "favoriteToolsTitle": "Favorite tools",
-    "favoriteToolsEmpty": "No tool usage recorded yet.",
-    "topAgentsTitle": "Top agents",
-    "topAgentsEmpty": "Agent usage will appear once you run agents.",
-    "popularModelsTitle": "Popular models",
-    "popularModelsEmpty": "Model usage will appear after you run more chats.",
-    "accountInsightsTitle": "Account insights",
-    "accountCreated": "Account created",
-    "accountAge": "Account age",
-    "organizationsJoined": "Organizations joined",
+    "summaryOrganizations": "Organisations rejointes",
+    "summaryToolUsage": "Exécutions d'outils",
+    "summaryToolUsageHelper": "Exécutions d'outils cumulées",
+    "summaryModelDiversity": "Modèles utilisés",
+    "weeklyChartTitle": "Activité hebdomadaire",
+    "weeklyChartDescription": "Vos requêtes sur la dernière semaine.",
+    "weeklyChartSeriesLabel": "Requêtes",
+    "lastDays": "{count, plural, one {Dernier # jour} other {Derniers # jours}}",
+    "tokenBreakdownTitle": "Répartition des jetons",
+    "tokenBreakdownTotal": "Jetons totaux",
+    "tokenBreakdownInput": "Jetons d'entrée",
+    "tokenBreakdownOutput": "Jetons de sortie",
+    "tokenBreakdownEmbedding": "Jetons d'intégration",
+    "tokenBreakdownEmbeddingHelper": "Ingestion et requêtes de base de connaissances",
+    "tokenBreakdownQueries": "Requêtes totales",
+    "favoriteToolsTitle": "Outils favoris",
+    "favoriteToolsEmpty": "Aucune utilisation d'outil enregistrée pour le moment.",
+    "topAgentsTitle": "Agents les plus utilisés",
+    "topAgentsEmpty": "L'utilisation des agents apparaîtra une fois que vous les exécuterez.",
+    "popularModelsTitle": "Modèles populaires",
+    "popularModelsEmpty": "L'utilisation des modèles apparaîtra après plus de chats.",
+    "accountInsightsTitle": "Informations sur le compte",
+    "accountCreated": "Compte créé",
+    "accountAge": "Âge du compte",
+    "organizationsJoined": "Organisations rejointes",
     "totalChats": "Conversations",
-    "firstActivity": "First activity",
-    "lastActive": "Last active",
-    "toolInvocations": "Tool runs",
-    "modelDiversity": "Models used",
-    "noActivityYet": "Not yet recorded",
-    "noData": "Not available",
-    "daysCount": "{count, plural, one {# day} other {# days}}",
-    "runsCount": "{count, plural, one {# run} other {# runs}}",
+    "firstActivity": "Première activité",
+    "lastActive": "Dernière activité",
+    "toolInvocations": "Exécutions d'outils",
+    "modelDiversity": "Modèles utilisés",
+    "noActivityYet": "Pas encore enregistré",
+    "noData": "Non disponible",
+    "daysCount": "{count, plural, one {# jour} other {# jours}}",
+    "runsCount": "{count, plural, one {# exécution} other {# exécutions}}",
     "toolSource": {
-      "default": "Built-in",
-      "workflow": "Workflow",
+      "default": "Intégré",
+      "workflow": "Flux de travail",
       "mcp": "MCP"
     },
-    "agentOwner": "Owned by {name}",
-    "unknownProvider": "Unknown provider",
-    "unknownModel": "Unknown model",
-    "emptyState": "We don't have usage data yet. Start a chat to see insights here.",
-    "errorState": "We couldn’t load your analytics. Please try again shortly."
+    "agentOwner": "Propriété de {name}",
+    "unknownProvider": "Fournisseur inconnu",
+    "unknownModel": "Modèle inconnu",
+    "emptyState": "Nous n'avons pas encore de données d'utilisation. Commencez un chat pour voir les informations ici.",
+    "errorState": "Nous n'avons pas pu charger vos analyses. Veuillez réessayer sous peu."
   },
   "Agent": {
     "title": "Agent",
@@ -591,5 +593,81 @@
     "arrangeNodes": "Auto Layout",
     "nodesArranged": "Layout appliqué avec succès",
     "visibilityUpdated": "Visibilité mise à jour avec succès"
+  },
+  "KnowledgeBase": {
+    "title": "Base de Connaissances",
+    "subtitle": "Organisez les documents, suivez le traitement et connectez les connaissances à vos agents.",
+    "actions": {
+      "newKnowledgeBase": "Nouvelle Base de Connaissances",
+      "refresh": "Actualiser",
+      "uploadDocument": "Télécharger un Document",
+      "deleteKnowledgeBase": "Supprimer la Base de Connaissances",
+      "deleteDocument": "Supprimer",
+      "cancel": "Annuler",
+      "create": "Créer"
+    },
+    "list": {
+      "heading": "Vos Bases de Connaissances",
+      "noDescription": "Aucune description fournie",
+      "empty": "Vous n'avez pas encore créé de bases de connaissances."
+    },
+    "detail": {
+      "placeholderTitle": "Sélectionnez une base de connaissances",
+      "placeholderDescription": "Choisissez une base de connaissances dans la liste pour gérer les documents et les paramètres.",
+      "settings": "Paramètres",
+      "settingsDescription": "Renommez, décrivez ou ajustez la visibilité de cette base de connaissances.",
+      "metrics": {
+        "totalDocuments": "Total",
+        "pending": "En Attente",
+        "processing": "En Traitement",
+        "completed": "Terminé"
+      }
+    },
+    "documents": {
+      "heading": "Documents",
+      "description": "Téléchargez des fichiers pour ajouter un contexte consultable. Les documents sont intégrés de manière asynchrone.",
+      "table": {
+        "name": "Document",
+        "size": "Taille",
+        "status": "Statut",
+        "tokens": "Jetons d'Intégration",
+        "actions": "Actions"
+      },
+      "empty": "Aucun document téléchargé pour le moment."
+    },
+    "form": {
+      "name": "Nom",
+      "description": "Description",
+      "visibility": "Visibilité",
+      "namePlaceholder": "Base de connaissances Acme"
+    },
+    "visibility": {
+      "private": "Privé",
+      "readonly": "Lecture Seule",
+      "public": "Public"
+    },
+    "dialog": {
+      "createTitle": "Créer une base de connaissances",
+      "createDescription": "Donnez un nom à votre base de connaissances et une description optionnelle.",
+      "deleteTitle": "Supprimer la base de connaissances"
+    },
+    "messages": {
+      "created": "Base de connaissances créée",
+      "updated": "Base de connaissances mise à jour",
+      "deleted": "Base de connaissances supprimée",
+      "documentUploaded": "{file} téléchargé",
+      "documentDeleted": "Document supprimé",
+      "documentRenamed": "Document renommé"
+    },
+    "confirm": {
+      "deleteKnowledgeBase": "Supprimer cette base de connaissances et tous les documents associés ?",
+      "deleteDocument": "Supprimer {file} ?"
+    },
+    "status": {
+      "pending": "En Attente",
+      "processing": "En Traitement",
+      "completed": "Terminé",
+      "failed": "Échoué"
+    }
   }
 }
