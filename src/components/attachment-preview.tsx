@@ -7,7 +7,11 @@ import { Badge } from "ui/badge";
 import { FileIcon, X } from "lucide-react";
 import { formatFileSize } from "lib/utils";
 import { useTranslations } from "next-intl";
-import type { SelectedAttachment, FileAttachmentPart } from "@/types/chat-attachments";
+import type {
+  SelectedAttachment,
+  FileAttachmentPart,
+} from "@/types/chat-attachments";
+import Image from "next/image";
 
 interface AttachmentPreviewProps {
   attachment: SelectedAttachment | null;
@@ -16,7 +20,9 @@ interface AttachmentPreviewProps {
 
 const getDownloadUrl = (part: FileAttachmentPart): string | undefined => {
   const data = (part as { data?: string }).data;
-  return part.url ?? (data ? `data:${part.mediaType};base64,${data}` : undefined);
+  return (
+    part.url ?? (data ? `data:${part.mediaType};base64,${data}` : undefined)
+  );
 };
 
 const getFileSize = (part: FileAttachmentPart): number | undefined => {
@@ -29,9 +35,14 @@ const isPdf = (mediaType: string) =>
   mediaType === "application/pdf" || mediaType.endsWith("+pdf");
 
 const isTextLike = (mediaType: string) =>
-  mediaType.startsWith("text/") || mediaType.includes("json") || mediaType.includes("xml");
+  mediaType.startsWith("text/") ||
+  mediaType.includes("json") ||
+  mediaType.includes("xml");
 
-export function AttachmentPreview({ attachment, onClose }: AttachmentPreviewProps) {
+export function AttachmentPreview({
+  attachment,
+  onClose,
+}: AttachmentPreviewProps) {
   const t = useTranslations("Chat.Attachments");
 
   useEffect(() => {
@@ -78,15 +89,26 @@ export function AttachmentPreview({ attachment, onClose }: AttachmentPreviewProp
               >
                 <header className="flex items-start gap-3 border-b border-border/80 px-4 py-3">
                   <div className="flex-1 min-w-0 space-y-1">
-                    <p className="truncate text-sm font-semibold text-foreground" title={filename}>
+                    <p
+                      className="truncate text-sm font-semibold text-foreground"
+                      title={filename}
+                    >
                       {filename}
                     </p>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <span className="truncate" title={attachment.part.mediaType}>
+                      <span
+                        className="truncate"
+                        title={attachment.part.mediaType}
+                      >
                         {attachment.part.mediaType}
                       </span>
-                      {fileSize ? <span>{formatFileSize(fileSize)}</span> : null}
-                      <Badge variant="outline" className="uppercase tracking-wide text-[10px]">
+                      {fileSize ? (
+                        <span>{formatFileSize(fileSize)}</span>
+                      ) : null}
+                      <Badge
+                        variant="outline"
+                        className="uppercase tracking-wide text-[10px]"
+                      >
                         {attachment.message.role}
                       </Badge>
                     </div>
@@ -141,15 +163,24 @@ export function AttachmentPreview({ attachment, onClose }: AttachmentPreviewProp
             >
               <header className="flex items-start gap-3 border-b border-border/80 px-4 py-3">
                 <div className="flex-1 min-w-0 space-y-1">
-                  <p className="truncate text-sm font-semibold text-foreground" title={attachment.part.filename ?? t("untitled")}>
+                  <p
+                    className="truncate text-sm font-semibold text-foreground"
+                    title={attachment.part.filename ?? t("untitled")}
+                  >
                     {attachment.part.filename || t("untitled")}
                   </p>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span className="truncate" title={attachment.part.mediaType}>
+                    <span
+                      className="truncate"
+                      title={attachment.part.mediaType}
+                    >
                       {attachment.part.mediaType}
                     </span>
                     {fileSize ? <span>{formatFileSize(fileSize)}</span> : null}
-                    <Badge variant="outline" className="uppercase tracking-wide text-[10px]">
+                    <Badge
+                      variant="outline"
+                      className="uppercase tracking-wide text-[10px]"
+                    >
                       {attachment.message.role}
                     </Badge>
                   </div>
@@ -200,10 +231,14 @@ function renderPreviewContent({
   if (mediaType.startsWith("image/")) {
     return (
       <div className="grid h-full place-items-center bg-black/5 p-4">
-        <img
+        <Image
           src={downloadUrl}
           alt={filename}
+          width={1200}
+          height={900}
           className="max-h-[70vh] w-full rounded-lg object-contain"
+          style={{ height: "auto" }}
+          unoptimized
         />
       </div>
     );

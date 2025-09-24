@@ -364,6 +364,8 @@
     "tokenBreakdownTotal": "Total tokens",
     "tokenBreakdownInput": "Input tokens",
     "tokenBreakdownOutput": "Output tokens",
+    "tokenBreakdownEmbedding": "Embedding tokens",
+    "tokenBreakdownEmbeddingHelper": "Knowledge base ingestion and retrieval",
     "tokenBreakdownQueries": "Total queries",
     "favoriteToolsTitle": "Favorite tools",
     "favoriteToolsEmpty": "No tool usage recorded yet.",
@@ -438,7 +440,94 @@
     "public": "Público",
     "privateDescription": "Solo tú puedes ver, editar y usar este agente.",
     "readOnlyDescription": "Otros pueden ver y usar como herramienta, pero solo tú puedes editar.",
-    "publicDescription": "Cualquiera puede ver, editar y usar este agente como herramienta."
+    "publicDescription": "Cualquiera puede ver, editar y usar este agente como herramienta.",
+    "knowledgeBaseLabel": "Vincula bases de conocimiento",
+    "knowledgeBaseHelper": "Las bases de conocimiento enlazadas brindan contexto consultable durante las conversaciones.",
+    "knowledgeBaseDocuments": "{count, plural, one {# documento} other {# documentos}}",
+    "knowledgeBaseEmpty": "Aún no tienes bases de conocimiento.",
+    "knowledgeBaseUsageTitle": "Uso de embeddings",
+    "knowledgeBaseUsageDescription": "Sigue cuántos tokens de embedding consume este agente.",
+    "knowledgeBaseUsageByUser": "Tokens por usuario",
+    "knowledgeBaseUsageByOrganization": "Tokens por organización",
+    "knowledgeBaseUsageEmpty": "Este agente todavía no registra uso de embeddings.",
+    "knowledgeBaseUsageEmptyUser": "Sin actividad de usuarios.",
+    "knowledgeBaseUsageEmptyOrg": "Sin actividad de organizaciones."
+  },
+  "KnowledgeBase": {
+    "title": "Base de Conocimiento",
+    "subtitle": "Organiza documentos, sigue su procesamiento y vincula conocimiento a tus agentes.",
+    "actions": {
+      "newKnowledgeBase": "Nueva base de conocimiento",
+      "refresh": "Actualizar",
+      "uploadDocument": "Subir documento",
+      "deleteKnowledgeBase": "Eliminar base",
+      "deleteDocument": "Eliminar",
+      "cancel": "Cancelar",
+      "create": "Crear"
+    },
+    "list": {
+      "heading": "Tus bases de conocimiento",
+      "noDescription": "Sin descripción",
+      "empty": "Aún no has creado bases de conocimiento."
+    },
+    "detail": {
+      "placeholderTitle": "Selecciona una base",
+      "placeholderDescription": "Elige una base de conocimiento de la lista para gestionar documentos y ajustes.",
+      "settings": "Configuración",
+      "settingsDescription": "Renombra, describe o ajusta la visibilidad de esta base.",
+      "metrics": {
+        "totalDocuments": "Total",
+        "pending": "Pendiente",
+        "processing": "Procesando",
+        "completed": "Completado"
+      }
+    },
+    "documents": {
+      "heading": "Documentos",
+      "description": "Sube archivos para añadir contexto consultable. Los documentos se procesan de forma asíncrona.",
+      "table": {
+        "name": "Documento",
+        "size": "Tamaño",
+        "status": "Estado",
+        "tokens": "Tokens de embedding",
+        "actions": "Acciones"
+      },
+      "empty": "No hay documentos cargados."
+    },
+    "form": {
+      "name": "Nombre",
+      "description": "Descripción",
+      "visibility": "Visibilidad",
+      "namePlaceholder": "Base de conocimiento"
+    },
+    "visibility": {
+      "private": "Privado",
+      "readonly": "Solo lectura",
+      "public": "Público"
+    },
+    "dialog": {
+      "createTitle": "Crear base de conocimiento",
+      "createDescription": "Asigna un nombre y opcionalmente una descripción.",
+      "deleteTitle": "Eliminar base de conocimiento"
+    },
+    "messages": {
+      "created": "Base creada",
+      "updated": "Base actualizada",
+      "deleted": "Base eliminada",
+      "documentUploaded": "{file} subido",
+      "documentDeleted": "Documento eliminado",
+      "documentRenamed": "Documento renombrado"
+    },
+    "confirm": {
+      "deleteKnowledgeBase": "¿Eliminar esta base de conocimiento y todos sus documentos?",
+      "deleteDocument": "¿Eliminar {file}?"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "processing": "Procesando",
+      "completed": "Completado",
+      "failed": "Error"
+    }
   },
   "KeyboardShortcuts": {
     "title": "Atajos de Teclado",

@@ -35,6 +35,7 @@ import { OpenAIIcon } from "ui/openai-icon";
 import { GrokIcon } from "ui/grok-icon";
 import { ClaudeIcon } from "ui/claude-icon";
 import { GeminiIcon } from "ui/gemini-icon";
+import Image from "next/image";
 
 import { EMOJI_DATA } from "lib/const";
 import { AgentSummary } from "app-types/agent";
@@ -219,13 +220,14 @@ export default function PromptInput({
     setIsPreparing(true);
     try {
       const fileParts = attachments.map(
-        (attachment) => ({
-          type: "file" as const,
-          mediaType: attachment.mediaType,
-          filename: attachment.name,
-          url: attachment.dataUrl,
-          data: attachment.base64,
-        }) as UIMessage["parts"][number],
+        (attachment) =>
+          ({
+            type: "file" as const,
+            mediaType: attachment.mediaType,
+            filename: attachment.name,
+            url: attachment.dataUrl,
+            data: attachment.base64,
+          }) as UIMessage["parts"][number],
       );
 
       const parts: UIMessage["parts"] = [];
@@ -247,9 +249,7 @@ export default function PromptInput({
         setInput(previousInput);
         setAttachments(previousAttachments);
         console.error(error);
-        toast.error(
-          t("thisMessageWasNotSavedPleaseTryTheChatAgain"),
-        );
+        toast.error(t("thisMessageWasNotSavedPleaseTryTheChatAgain"));
         throw error;
       });
     } finally {
@@ -704,10 +704,13 @@ function AttachmentChip({
     >
       {isImage ? (
         <div className="size-10 overflow-hidden rounded-xl border border-border">
-          <img
+          <Image
             src={previewUrl ?? dataUrl}
             alt={name}
+            width={80}
+            height={80}
             className="size-full object-cover"
+            unoptimized
           />
         </div>
       ) : isAudio ? (

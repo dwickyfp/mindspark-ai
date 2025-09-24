@@ -1,15 +1,18 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useMutateAgents } from "@/hooks/queries/use-agents";
+import { useKnowledgeBases } from "@/hooks/queries/use-knowledge-bases";
 import { useMcpList } from "@/hooks/queries/use-mcp-list";
 import { useWorkflowToolList } from "@/hooks/queries/use-workflow-tool-list";
 import { useObjectState } from "@/hooks/use-object-state";
 import { useBookmark } from "@/hooks/queries/use-bookmark";
 import { Agent, AgentCreateSchema, AgentUpdateSchema } from "app-types/agent";
+import { AgentEmbeddingUsageSummary } from "app-types/analytics";
 import { ChatMention } from "app-types/chat";
 import { MCPServerInfo } from "app-types/mcp";
 import { WorkflowSummary } from "app-types/workflow";
@@ -20,6 +23,7 @@ import { safe } from "ts-safe";
 import { handleErrorWithToast } from "ui/shared-toast";
 import { ChevronDownIcon, Loader, WandSparklesIcon } from "lucide-react";
 import { Button } from "ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,6 +46,7 @@ import {
 } from "lib/ai/agent/example";
 import { notify } from "lib/notify";
 import { Badge } from "ui/badge";
+import { Checkbox } from "ui/checkbox";
 
 const defaultConfig = (): PartialBy<
   Omit<Agent, "createdAt" | "updatedAt" | "userId">,
@@ -64,6 +69,8 @@ const defaultConfig = (): PartialBy<
       mentions: [],
     },
     visibility: "private",
+    knowledgeBases: [],
+    knowledgeBaseIds: [],
   };
 };
 
@@ -93,7 +100,15 @@ export default function EditAgent({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Initialize agent state with initial data or defaults
-  const [agent, setAgent] = useObjectState(initialAgent || defaultConfig());
+  const [agent, setAgent] = useObjectState(
+    initialAgent
+      ? {
+          ...initialAgent,
+          knowledgeBaseIds:
+            initialAgent.knowledgeBases?.map((kb) => kb.id) ?? [],
+        }
+      : defaultConfig(),
+  );
 
   const { toggleBookmark, isLoading: isBookmarkToggleLoadingFn } = useBookmark({
     itemType: "agent",
@@ -108,6 +123,18 @@ export default function EditAgent({
   const { data: mcpList, isLoading: isMcpLoading } = useMcpList();
   const { data: workflowToolList, isLoading: isWorkflowLoading } =
     useWorkflowToolList();
+  const { data: knowledgeBaseList } = useKnowledgeBases({
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  });
+  const { data: embeddingUsage } = useSWR<AgentEmbeddingUsageSummary>(
+    initialAgent?.id ? `/api/agent/${initialAgent.id}/usage` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    },
+  );
 
   const assignToolsByNames = useCallback(
     (toolNames: string[]) => {
@@ -314,29 +341,25 @@ export default function EditAgent({
 
   const isGenerating = openGenerateAgentDialog;
   const sharedOrganizations = agent.sharedOrganizations ?? [];
-  const organizationBadge = initialAgent
-    ? !isOwner && initialAgent.organizationName
-      ? (
-          <Badge variant="outline" className="uppercase text-[10px]">
-            {t("Agent.sharedFromOrganization", {
-              organization: initialAgent.organizationName,
+  const organizationBadge = initialAgent ? (
+    !isOwner && initialAgent.organizationName ? (
+      <Badge variant="outline" className="uppercase text-[10px]">
+        {t("Agent.sharedFromOrganization", {
+          organization: initialAgent.organizationName,
+        })}
+      </Badge>
+    ) : isOwner && sharedOrganizations.length > 0 ? (
+      <Badge variant="outline" className="uppercase text-[10px]">
+        {sharedOrganizations.length === 1
+          ? t("Agent.sharedWithSingleOrganization", {
+              organization: sharedOrganizations[0]?.name ?? "",
+            })
+          : t("Agent.sharedWithMultipleOrganizations", {
+              count: sharedOrganizations.length,
             })}
-          </Badge>
-        )
-      : isOwner && sharedOrganizations.length > 0
-        ? (
-            <Badge variant="outline" className="uppercase text-[10px]">
-              {sharedOrganizations.length === 1
-                ? t("Agent.sharedWithSingleOrganization", {
-                    organization: sharedOrganizations[0]?.name ?? "",
-                  })
-                : t("Agent.sharedWithMultipleOrganizations", {
-                    count: sharedOrganizations.length,
-                  })}
-            </Badge>
-          )
-        : null
-    : null;
+      </Badge>
+    ) : null
+  ) : null;
 
   return (
     <ScrollArea className="h-full w-full relative">
@@ -531,6 +554,61 @@ export default function EditAgent({
             )}
           </div>
 
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="agent-knowledge-base" className="text-base">
+              {t("Agent.knowledgeBaseLabel")}
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              {t("Agent.knowledgeBaseHelper")}
+            </p>
+            <div className="space-y-2 rounded-lg border border-dashed border-border/60 bg-muted/30 p-4">
+              {knowledgeBaseList?.length ? (
+                knowledgeBaseList.map((knowledgeBase) => {
+                  const checked = agent.knowledgeBaseIds?.includes(
+                    knowledgeBase.id,
+                  );
+                  return (
+                    <label
+                      key={knowledgeBase.id}
+                      className="flex items-start gap-3 rounded-md border border-transparent p-2 transition-colors hover:border-border"
+                    >
+                      <Checkbox
+                        checked={checked}
+                        disabled={isLoading || !hasEditAccess}
+                        onCheckedChange={(value) => {
+                          const isChecked = Boolean(value);
+                          const nextIds = new Set(agent.knowledgeBaseIds ?? []);
+                          if (isChecked) {
+                            nextIds.add(knowledgeBase.id);
+                          } else {
+                            nextIds.delete(knowledgeBase.id);
+                          }
+                          setAgent({
+                            knowledgeBaseIds: Array.from(nextIds),
+                          });
+                        }}
+                      />
+                      <div>
+                        <p className="text-sm font-medium">
+                          {knowledgeBase.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {t("Agent.knowledgeBaseDocuments", {
+                            count: knowledgeBase.documentCount,
+                          })}
+                        </p>
+                      </div>
+                    </label>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {t("Agent.knowledgeBaseEmpty")}
+                </p>
+              )}
+            </div>
+          </div>
+
           <div className="flex gap-2 flex-col">
             <Label htmlFor="agent-tool-bindings" className="text-base">
               {t("Agent.agentToolsLabel")}
@@ -554,6 +632,77 @@ export default function EditAgent({
               />
             )}
           </div>
+
+          {initialAgent?.id ? (
+            <div className="flex flex-col gap-3">
+              <div>
+                <Label className="text-base">
+                  {t("Agent.knowledgeBaseUsageTitle")}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {t("Agent.knowledgeBaseUsageDescription")}
+                </p>
+              </div>
+              {embeddingUsage ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Card className="border-border/60 bg-muted/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-semibold text-muted-foreground">
+                        {t("Agent.knowledgeBaseUsageByUser")}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                      {embeddingUsage.byUser.length ? (
+                        embeddingUsage.byUser.map((row) => (
+                          <div
+                            key={row.userId}
+                            className="flex items-center justify-between gap-2"
+                          >
+                            <span>{row.userName ?? row.userId}</span>
+                            <Badge variant="secondary">{row.tokens}</Badge>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          {t("Agent.knowledgeBaseUsageEmptyUser")}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                  <Card className="border-border/60 bg-muted/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-semibold text-muted-foreground">
+                        {t("Agent.knowledgeBaseUsageByOrganization")}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                      {embeddingUsage.byOrganization.length ? (
+                        embeddingUsage.byOrganization.map((row) => (
+                          <div
+                            key={row.organizationId}
+                            className="flex items-center justify-between gap-2"
+                          >
+                            <span>
+                              {row.organizationName ?? row.organizationId}
+                            </span>
+                            <Badge variant="secondary">{row.tokens}</Badge>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          {t("Agent.knowledgeBaseUsageEmptyOrg")}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {t("Agent.knowledgeBaseUsageEmpty")}
+                </p>
+              )}
+            </div>
+          ) : null}
         </div>
 
         {hasEditAccess && (

@@ -41,7 +41,8 @@
     "docker:app": "docker build -f docker/Dockerfile -t mind-spark . && docker run -p 3000:3000 -e NO_HTTPS=1 mind-spark",
     "prepare": "husky",
     "playwright:install": "playwright install",
-    "check": "pnpm lint:fix && pnpm check-types && pnpm test"
+    "check": "pnpm lint:fix && pnpm check-types && pnpm test",
+    "worker:rag": "tsx src/workers/rag-worker.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.17",
@@ -55,6 +56,8 @@
     "@modelcontextprotocol/sdk": "^1.18.1",
     "@openrouter/ai-sdk-provider": "^1.2.0",
     "@radix-ui/react-accordion": "^1.2.12",
+    "@aws-sdk/client-s3": "^3.744.0",
+    "@aws-sdk/lib-storage": "^3.744.0",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-checkbox": "^1.3.3",
     "@radix-ui/react-context-menu": "^2.2.16",
@@ -78,6 +81,7 @@
     "@tiptap/suggestion": "^2.26.1",
     "@xyflow/react": "^12.8.5",
     "ai": "^5.0.48",
+    "@dqbd/tiktoken": "^1.0.17",
     "bcrypt-ts": "^7.1.0",
     "better-auth": "^1.3.13",
     "chokidar": "^4.0.3",
@@ -91,6 +95,7 @@
     "drizzle-orm": "^0.41.0",
     "emoji-picker-react": "^4.13.3",
     "framer-motion": "^12.23.16",
+    "mammoth": "^1.8.0",
     "hast-util-to-jsx-runtime": "^2.3.6",
     "ioredis": "^5.7.0",
     "json-schema": "^0.4.0",
@@ -103,6 +108,7 @@
     "ogl": "^1.0.11",
     "ollama-ai-provider-v2": "^1.3.1",
     "pg": "^8.16.3",
+    "pdf-parse": "^1.1.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-markdown": "^10.1.0",

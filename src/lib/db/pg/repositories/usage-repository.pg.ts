@@ -3,12 +3,16 @@ import {
   AgentSchema,
   ChatMessageSchema,
   ChatThreadSchema,
+  EmbeddingUsageLogSchema,
   ModelUsageLogSchema,
+  OrganizationSchema,
   ToolUsageLogSchema,
   UserSchema,
 } from "../schema.pg";
 import {
+  AgentEmbeddingUsageSummary,
   AgentUsageAnalytics,
+  EmbeddingUsageLogInsert,
   ModelUsageAggregate,
   ModelUsageLogInsert,
   TokenUsageTotals,
@@ -81,6 +85,21 @@ export const pgUsageLogRepository: UsageLogRepository = {
       });
   },
 
+  async logEmbeddingUsage(log) {
+    await db.insert(EmbeddingUsageLogSchema).values({
+      userId: log.userId,
+      organizationId: log.organizationId ?? null,
+      agentId: log.agentId ?? null,
+      knowledgeBaseId: log.knowledgeBaseId ?? null,
+      documentId: log.documentId ?? null,
+      operation: log.operation,
+      tokens: log.tokens,
+      model: log.model,
+      metadata: log.metadata ?? null,
+      createdAt: new Date(),
+    });
+  },
+
   async getModelUsageAggregatesForUsers(userIds: string[]) {
     if (userIds.length === 0) return [];
 
@@ -103,7 +122,12 @@ export const pgUsageLogRepository: UsageLogRepository = {
 
   async getTokenUsageTotalsForUsers(userIds: string[]) {
     if (userIds.length === 0) {
-      return { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+      return {
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        embeddingTokens: 0,
+      };
     }
 
     const [row] = await db
@@ -115,11 +139,71 @@ export const pgUsageLogRepository: UsageLogRepository = {
       .from(ModelUsageLogSchema)
       .where(inArray(ModelUsageLogSchema.userId, userIds));
 
-    return (row ?? {
+    const [embeddingRow] = await db
+      .select({
+        embeddingTokens: sql<number>`COALESCE(SUM(${EmbeddingUsageLogSchema.tokens}), 0)`,
+      })
+      .from(EmbeddingUsageLogSchema)
+      .where(inArray(EmbeddingUsageLogSchema.userId, userIds));
+
+    const totals = row ?? {
       inputTokens: 0,
       outputTokens: 0,
       totalTokens: 0,
-    }) as TokenUsageTotals;
+    };
+
+    return {
+      inputTokens: Number(totals.inputTokens ?? 0),
+      outputTokens: Number(totals.outputTokens ?? 0),
+      totalTokens: Number(totals.totalTokens ?? 0),
+      embeddingTokens: Number(embeddingRow?.embeddingTokens ?? 0),
+    } satisfies TokenUsageTotals;
+  },
+
+  async getEmbeddingUsageSummaryForAgent(agentId) {
+    const byUserRows = await db
+      .select({
+        userId: EmbeddingUsageLogSchema.userId,
+        userName: UserSchema.name,
+        tokens: sql<number>`COALESCE(SUM(${EmbeddingUsageLogSchema.tokens}), 0)`,
+      })
+      .from(EmbeddingUsageLogSchema)
+      .leftJoin(UserSchema, eq(UserSchema.id, EmbeddingUsageLogSchema.userId))
+      .where(eq(EmbeddingUsageLogSchema.agentId, agentId))
+      .groupBy(EmbeddingUsageLogSchema.userId, UserSchema.name)
+      .orderBy(desc(sql`COALESCE(SUM(${EmbeddingUsageLogSchema.tokens}), 0)`));
+
+    const byOrganizationRows = await db
+      .select({
+        organizationId: EmbeddingUsageLogSchema.organizationId,
+        organizationName: OrganizationSchema.name,
+        tokens: sql<number>`COALESCE(SUM(${EmbeddingUsageLogSchema.tokens}), 0)`,
+      })
+      .from(EmbeddingUsageLogSchema)
+      .leftJoin(
+        OrganizationSchema,
+        eq(OrganizationSchema.id, EmbeddingUsageLogSchema.organizationId),
+      )
+      .where(eq(EmbeddingUsageLogSchema.agentId, agentId))
+      .groupBy(EmbeddingUsageLogSchema.organizationId, OrganizationSchema.name)
+      .orderBy(desc(sql`COALESCE(SUM(${EmbeddingUsageLogSchema.tokens}), 0)`));
+
+    return {
+      byUser: byUserRows
+        .filter((row) => row.userId)
+        .map((row) => ({
+          userId: row.userId!,
+          userName: row.userName ?? null,
+          tokens: Number(row.tokens ?? 0),
+        })),
+      byOrganization: byOrganizationRows
+        .filter((row) => row.organizationId)
+        .map((row) => ({
+          organizationId: row.organizationId!,
+          organizationName: row.organizationName ?? null,
+          tokens: Number(row.tokens ?? 0),
+        })),
+    };
   },
 
   async getToolUsageAggregatesForUsers(userIds: string[]) {
@@ -148,7 +232,10 @@ export const pgUsageLogRepository: UsageLogRepository = {
 
   async getAgentUsageForUsers(userIds: string[]) {
     if (userIds.length === 0) {
-      return { totalInteractions: 0, topAgents: [] } satisfies AgentUsageAnalytics;
+      return {
+        totalInteractions: 0,
+        topAgents: [],
+      } satisfies AgentUsageAnalytics;
     }
 
     const agentIdExpr = sql<string>`(${ChatMessageSchema.metadata} ->> 'agentId')`;
@@ -235,15 +322,18 @@ export const pgUsageLogRepository: UsageLogRepository = {
       dailyMap.set(row.date, Number(row.count));
     });
 
-    const daily: UserUsageSummary["daily"] = Array.from({ length: days }, (_, index) => {
-      const current = new Date(startDate);
-      current.setUTCDate(startDate.getUTCDate() + index);
-      const isoDate = current.toISOString().slice(0, 10);
-      return {
-        date: isoDate,
-        count: dailyMap.get(isoDate) ?? 0,
-      };
-    });
+    const daily: UserUsageSummary["daily"] = Array.from(
+      { length: days },
+      (_, index) => {
+        const current = new Date(startDate);
+        current.setUTCDate(startDate.getUTCDate() + index);
+        const isoDate = current.toISOString().slice(0, 10);
+        return {
+          date: isoDate,
+          count: dailyMap.get(isoDate) ?? 0,
+        };
+      },
+    );
 
     const [summaryRow] = await db
       .select({

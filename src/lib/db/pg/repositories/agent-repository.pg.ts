@@ -1,41 +1,181 @@
-import { Agent, AgentRepository, AgentSummary } from "app-types/agent";
+import {
+  Agent,
+  AgentKnowledgeBaseLink,
+  AgentRepository,
+  AgentSummary,
+} from "app-types/agent";
 import { pgDb as db } from "../db.pg";
 import {
   AgentSchema,
+  AgentKnowledgeBaseSchema,
   BookmarkSchema,
+  KnowledgeBaseSchema,
   OrganizationAgentSchema,
   OrganizationMemberSchema,
   OrganizationSchema,
   UserSchema,
 } from "../schema.pg";
-import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { generateUUID } from "lib/utils";
+
+type PgClient = typeof db;
+
+async function ensureAccessibleKnowledgeBases(
+  client: PgClient,
+  userId: string,
+  knowledgeBaseIds: string[] | undefined,
+): Promise<AgentKnowledgeBaseLink[]> {
+  const uniqueIds = Array.from(
+    new Set((knowledgeBaseIds ?? []).filter((id): id is string => Boolean(id))),
+  );
+
+  if (!uniqueIds.length) {
+    return [];
+  }
+
+  const rows = await client
+    .select({
+      id: KnowledgeBaseSchema.id,
+      name: KnowledgeBaseSchema.name,
+      ownerUserId: KnowledgeBaseSchema.ownerUserId,
+      visibility: KnowledgeBaseSchema.visibility,
+      organizationId: KnowledgeBaseSchema.organizationId,
+      isMember: sql<boolean>`CASE WHEN ${OrganizationMemberSchema.id} IS NULL THEN false ELSE true END`,
+    })
+    .from(KnowledgeBaseSchema)
+    .leftJoin(
+      OrganizationMemberSchema,
+      and(
+        eq(
+          OrganizationMemberSchema.organizationId,
+          KnowledgeBaseSchema.organizationId,
+        ),
+        eq(OrganizationMemberSchema.userId, userId),
+      ),
+    )
+    .where(inArray(KnowledgeBaseSchema.id, uniqueIds));
+
+  const accessible = new Map<string, AgentKnowledgeBaseLink>();
+
+  for (const row of rows) {
+    const isOwner = row.ownerUserId === userId;
+    const isMember = row.isMember;
+    const isPublic = row.visibility === "public";
+    const isReadonly = row.visibility === "readonly";
+    const hasOrganization = row.organizationId !== null;
+
+    if (isOwner || isPublic || isReadonly || (hasOrganization && isMember)) {
+      accessible.set(row.id, { id: row.id, name: row.name });
+    }
+  }
+
+  if (accessible.size !== uniqueIds.length) {
+    throw new Error("One or more knowledge bases are not accessible");
+  }
+
+  return uniqueIds.map((id) => accessible.get(id)!);
+}
+
+async function syncAgentKnowledgeBases(
+  client: PgClient,
+  agentId: string,
+  userId: string,
+  knowledgeBaseIds: string[] | undefined,
+): Promise<AgentKnowledgeBaseLink[]> {
+  const knowledgeBases = await ensureAccessibleKnowledgeBases(
+    client,
+    userId,
+    knowledgeBaseIds,
+  );
+
+  await client
+    .delete(AgentKnowledgeBaseSchema)
+    .where(eq(AgentKnowledgeBaseSchema.agentId, agentId));
+
+  if (!knowledgeBases.length) {
+    return [];
+  }
+
+  const insertValues = knowledgeBases.map((kb) => ({
+    id: generateUUID(),
+    agentId,
+    knowledgeBaseId: kb.id,
+    createdAt: new Date(),
+  }));
+
+  await client.insert(AgentKnowledgeBaseSchema).values(insertValues);
+
+  return knowledgeBases;
+}
+
+async function loadAgentKnowledgeBaseMap(
+  client: PgClient,
+  agentIds: string[],
+): Promise<Map<string, AgentKnowledgeBaseLink[]>> {
+  if (!agentIds.length) {
+    return new Map();
+  }
+
+  const rows = await client
+    .select({
+      agentId: AgentKnowledgeBaseSchema.agentId,
+      knowledgeBaseId: AgentKnowledgeBaseSchema.knowledgeBaseId,
+      name: KnowledgeBaseSchema.name,
+      createdAt: AgentKnowledgeBaseSchema.createdAt,
+    })
+    .from(AgentKnowledgeBaseSchema)
+    .innerJoin(
+      KnowledgeBaseSchema,
+      eq(AgentKnowledgeBaseSchema.knowledgeBaseId, KnowledgeBaseSchema.id),
+    )
+    .where(inArray(AgentKnowledgeBaseSchema.agentId, agentIds))
+    .orderBy(asc(AgentKnowledgeBaseSchema.createdAt));
+
+  const map = new Map<string, AgentKnowledgeBaseLink[]>();
+  for (const row of rows) {
+    const list = map.get(row.agentId) ?? [];
+    list.push({ id: row.knowledgeBaseId, name: row.name });
+    map.set(row.agentId, list);
+  }
+  return map;
+}
 
 export const pgAgentRepository: AgentRepository = {
   async insertAgent(agent) {
-    const [result] = await db
-      .insert(AgentSchema)
-      .values({
-        id: generateUUID(),
-        name: agent.name,
-        description: agent.description,
-        icon: agent.icon,
-        userId: agent.userId,
-        instructions: agent.instructions,
-        visibility: agent.visibility || "private",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .returning();
+    return db.transaction(async (tx) => {
+      const now = new Date();
+      const [result] = await tx
+        .insert(AgentSchema)
+        .values({
+          id: generateUUID(),
+          name: agent.name,
+          description: agent.description,
+          icon: agent.icon,
+          userId: agent.userId,
+          instructions: agent.instructions,
+          visibility: agent.visibility || "private",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
 
-    return {
-      ...result,
-      description: result.description ?? undefined,
-      icon: result.icon ?? undefined,
-      instructions: result.instructions ?? {},
-      sharedOrganizations: [],
-      scope: "personal",
-    };
+      const knowledgeBases = await syncAgentKnowledgeBases(
+        tx,
+        result.id,
+        agent.userId,
+        agent.knowledgeBaseIds,
+      );
+
+      return {
+        ...result,
+        description: result.description ?? undefined,
+        icon: result.icon ?? undefined,
+        instructions: result.instructions ?? {},
+        sharedOrganizations: [],
+        scope: "personal",
+        knowledgeBases,
+      };
+    });
   },
 
   async selectAgentById(id, userId): Promise<Agent | null> {
@@ -114,6 +254,9 @@ export const pgAgentRepository: AgentRepository = {
           ? "public"
           : "personal";
 
+    const knowledgeBaseMap = await loadAgentKnowledgeBaseMap(db, [id]);
+    const knowledgeBases = knowledgeBaseMap.get(id) ?? [];
+
     return {
       ...agent,
       description: agent.description ?? undefined,
@@ -124,6 +267,8 @@ export const pgAgentRepository: AgentRepository = {
       scope,
       organizationId: primaryOrg?.organizationId,
       organizationName: primaryOrg?.organizationName,
+      knowledgeBases,
+      knowledgeBaseIds: knowledgeBases.map((kb) => kb.id),
     };
   },
 
@@ -174,6 +319,8 @@ export const pgAgentRepository: AgentRepository = {
       });
     }
 
+    const knowledgeBaseMap = await loadAgentKnowledgeBaseMap(db, agentIds);
+
     // Map database nulls to undefined and set defaults for owned agents
     return results.map((result) => ({
       ...result,
@@ -185,42 +332,60 @@ export const pgAgentRepository: AgentRepository = {
       isBookmarked: false, // Always false for owned agents
       sharedOrganizations: allShareMap.get(result.id) ?? [],
       scope: "personal",
+      knowledgeBases: knowledgeBaseMap.get(result.id) ?? [],
+      knowledgeBaseIds:
+        knowledgeBaseMap.get(result.id)?.map((kb) => kb.id) ?? [],
     }));
   },
 
   async updateAgent(id, userId, agent) {
-    const [result] = await db
-      .update(AgentSchema)
-      .set({
-        ...agent,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          // Only allow updates to agents owned by the user or public agents
-          eq(AgentSchema.id, id),
-          or(
-            eq(AgentSchema.userId, userId),
-            eq(AgentSchema.visibility, "public"),
+    return db.transaction(async (tx) => {
+      const { knowledgeBaseIds, ...agentPayload } = agent;
+
+      const [result] = await tx
+        .update(AgentSchema)
+        .set({
+          ...agentPayload,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(AgentSchema.id, id),
+            or(
+              eq(AgentSchema.userId, userId),
+              eq(AgentSchema.visibility, "public"),
+            ),
           ),
-        ),
-      )
-      .returning();
+        )
+        .returning();
 
-    if (result?.visibility === "private") {
-      await db
-        .delete(OrganizationAgentSchema)
-        .where(eq(OrganizationAgentSchema.agentId, id));
-    }
+      if (!result) {
+        throw new Error("Unable to update agent");
+      }
 
-    return {
-      ...result,
-      description: result.description ?? undefined,
-      icon: result.icon ?? undefined,
-      instructions: result.instructions ?? {},
-      sharedOrganizations: [],
-      scope: result.userId === userId ? "personal" : undefined,
-    };
+      if (result.visibility === "private") {
+        await tx
+          .delete(OrganizationAgentSchema)
+          .where(eq(OrganizationAgentSchema.agentId, id));
+      }
+
+      if (knowledgeBaseIds !== undefined) {
+        await syncAgentKnowledgeBases(tx, id, result.userId, knowledgeBaseIds);
+      }
+
+      const knowledgeBaseMap = await loadAgentKnowledgeBaseMap(tx, [id]);
+      const knowledgeBases = knowledgeBaseMap.get(id) ?? [];
+
+      return {
+        ...result,
+        description: result.description ?? undefined,
+        icon: result.icon ?? undefined,
+        instructions: result.instructions ?? {},
+        sharedOrganizations: [],
+        scope: result.userId === userId ? "personal" : undefined,
+        knowledgeBases,
+      };
+    });
   },
 
   async deleteAgent(id, userId) {
@@ -371,6 +536,8 @@ export const pgAgentRepository: AgentRepository = {
       });
     }
 
+    const knowledgeBaseMap = await loadAgentKnowledgeBaseMap(db, agentIds);
+
     // Map database nulls to undefined
     return results.map((result) => ({
       ...result,
@@ -400,6 +567,9 @@ export const pgAgentRepository: AgentRepository = {
         result.userId === currentUserId
           ? undefined
           : accessibleOrgAgentMap.get(result.id)?.[0]?.name,
+      knowledgeBases: knowledgeBaseMap.get(result.id) ?? [],
+      knowledgeBaseIds:
+        knowledgeBaseMap.get(result.id)?.map((kb) => kb.id) ?? [],
     }));
   },
 

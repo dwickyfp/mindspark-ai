@@ -33,6 +33,7 @@ import {
   useCallback,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
+import Image from "next/image";
 import { MessageEditor } from "./message-editor";
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { useCopy } from "@/hooks/use-copy";
@@ -312,7 +313,8 @@ export function AttachmentMessagePart({
   const isImage = part.mediaType.startsWith("image/");
   const isAudio = part.mediaType.startsWith("audio/");
   const data = (part as { data?: string }).data;
-  const downloadUrl = part.url ?? (data ? `data:${part.mediaType};base64,${data}` : undefined);
+  const downloadUrl =
+    part.url ?? (data ? `data:${part.mediaType};base64,${data}` : undefined);
   const { messageId, partIndex } = selection;
 
   const previewLabel = isSelected ? t("previewActive") : t("openPreview");
@@ -355,7 +357,9 @@ export function AttachmentMessagePart({
   );
 
   return (
-    <div className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}>
+    <div
+      className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}
+    >
       <div
         role="button"
         tabIndex={0}
@@ -368,10 +372,14 @@ export function AttachmentMessagePart({
       >
         {isImage && downloadUrl && (
           <div className="overflow-hidden rounded-xl border border-border/60">
-            <img
+            <Image
               src={downloadUrl}
               alt={filename}
+              width={800}
+              height={600}
               className="max-h-64 w-full object-cover"
+              style={{ height: "auto" }}
+              unoptimized
             />
           </div>
         )}
@@ -387,7 +395,9 @@ export function AttachmentMessagePart({
 
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            {!isImage && !isAudio && <FileIcon className="size-4 flex-shrink-0" />}
+            {!isImage && !isAudio && (
+              <FileIcon className="size-4 flex-shrink-0" />
+            )}
             <span className={filenameClass} title={filename}>
               {filename}
             </span>
@@ -398,8 +408,12 @@ export function AttachmentMessagePart({
           {isImage && <ImageIcon className="size-3" />}
           {isAudio && <FileAudio className="size-3" />}
         </div>
-        <div className={cn("flex items-center justify-between", subtleTextClass)}>
-          <span className="font-medium text-[11px] leading-4">{previewLabel}</span>
+        <div
+          className={cn("flex items-center justify-between", subtleTextClass)}
+        >
+          <span className="font-medium text-[11px] leading-4">
+            {previewLabel}
+          </span>
           <ChevronRight className="size-3 opacity-60" />
         </div>
       </div>

@@ -363,6 +363,8 @@
     "tokenBreakdownTotal": "Total tokens",
     "tokenBreakdownInput": "Input tokens",
     "tokenBreakdownOutput": "Output tokens",
+    "tokenBreakdownEmbedding": "Embedding トークン",
+    "tokenBreakdownEmbeddingHelper": "ナレッジベースの取り込みと検索",
     "tokenBreakdownQueries": "Total queries",
     "favoriteToolsTitle": "Favorite tools",
     "favoriteToolsEmpty": "No tool usage recorded yet.",
@@ -425,6 +427,17 @@
     "bookmarkedAgent": "ブックマークしたエージェント",
     "addBookmark": "エージェントをブックマーク",
     "removeBookmark": "ブックマークを削除",
+    "knowledgeBaseLabel": "ナレッジベースをリンク",
+    "knowledgeBaseHelper": "リンクされたナレッジベースは会話中に検索可能なコンテキストを提供します。",
+    "knowledgeBaseDocuments": "{count, plural, one {# 件のドキュメント} other {# 件のドキュメント}}",
+    "knowledgeBaseEmpty": "利用できるナレッジベースはまだありません。",
+    "knowledgeBaseUsageTitle": "Embedding の使用状況",
+    "knowledgeBaseUsageDescription": "このエージェントが消費した埋め込みトークン数を追跡します。",
+    "knowledgeBaseUsageByUser": "ユーザー別トークン",
+    "knowledgeBaseUsageByOrganization": "組織別トークン",
+    "knowledgeBaseUsageEmpty": "このエージェントの埋め込み使用履歴はまだありません。",
+    "knowledgeBaseUsageEmptyUser": "ユーザーのアクティビティはまだありません。",
+    "knowledgeBaseUsageEmptyOrg": "組織のアクティビティはまだありません。",
     "visibilityUpdated": "公開設定を更新しました",
     "deleted": "エージェントを削除しました",
     "deleteConfirm": "このエージェントを削除してもよろしいですか？",
@@ -438,6 +451,82 @@
     "privateDescription": "あなただけがこのエージェントを表示、編集、使用できます。",
     "readOnlyDescription": "他の人もツールとして表示・使用できますが、編集はあなただけができます。",
     "publicDescription": "誰でもこのエージェントをツールとして表示、編集、使用できます。"
+  },
+  "KnowledgeBase": {
+    "title": "ナレッジベース",
+    "subtitle": "ドキュメントを整理し、処理状況を追跡して、知識をエージェントに接続します。",
+    "actions": {
+      "newKnowledgeBase": "ナレッジベースを作成",
+      "refresh": "更新",
+      "uploadDocument": "ドキュメントをアップロード",
+      "deleteKnowledgeBase": "ナレッジベースを削除",
+      "deleteDocument": "削除",
+      "cancel": "キャンセル",
+      "create": "作成"
+    },
+    "list": {
+      "heading": "ナレッジベース一覧",
+      "noDescription": "説明はありません",
+      "empty": "まだナレッジベースが作成されていません。"
+    },
+    "detail": {
+      "placeholderTitle": "ナレッジベースを選択",
+      "placeholderDescription": "リストからナレッジベースを選択して、ドキュメントと設定を管理します。",
+      "settings": "設定",
+      "settingsDescription": "このナレッジベースの名前、説明、公開範囲を調整します。",
+      "metrics": {
+        "totalDocuments": "合計",
+        "pending": "保留中",
+        "processing": "処理中",
+        "completed": "完了"
+      }
+    },
+    "documents": {
+      "heading": "ドキュメント",
+      "description": "検索可能なコンテキストを追加するためにファイルをアップロードします。ドキュメントは非同期で埋め込み処理されます。",
+      "table": {
+        "name": "ドキュメント",
+        "size": "サイズ",
+        "status": "ステータス",
+        "tokens": "埋め込みトークン",
+        "actions": "操作"
+      },
+      "empty": "ドキュメントがまだアップロードされていません。"
+    },
+    "form": {
+      "name": "名前",
+      "description": "説明",
+      "visibility": "公開範囲",
+      "namePlaceholder": "Acme ナレッジベース"
+    },
+    "visibility": {
+      "private": "非公開",
+      "readonly": "読み取り専用",
+      "public": "公開"
+    },
+    "dialog": {
+      "createTitle": "ナレッジベースを作成",
+      "createDescription": "ナレッジベースの名前と任意の説明を入力してください。",
+      "deleteTitle": "ナレッジベースを削除"
+    },
+    "messages": {
+      "created": "ナレッジベースを作成しました",
+      "updated": "ナレッジベースを更新しました",
+      "deleted": "ナレッジベースを削除しました",
+      "documentUploaded": "{file} をアップロードしました",
+      "documentDeleted": "ドキュメントを削除しました",
+      "documentRenamed": "ドキュメント名を変更しました"
+    },
+    "confirm": {
+      "deleteKnowledgeBase": "このナレッジベースと関連ドキュメントをすべて削除しますか？",
+      "deleteDocument": "{file} を削除しますか？"
+    },
+    "status": {
+      "pending": "保留中",
+      "processing": "処理中",
+      "completed": "完了",
+      "failed": "失敗"
+    }
   },
   "KeyboardShortcuts": {
     "title": "キーボードショートカット",

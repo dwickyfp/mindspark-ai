@@ -8,7 +8,7 @@ networks:
 services:
   postgres-db:
     container_name: postgres_db
-    image: debezium/postgres:17
+    image: pgvector/pgvector:pg17
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -26,8 +26,17 @@ services:
     restart: unless-stopped
     networks: [ai-net]
 
-volumes:
-  sequin_postgres_data:
-  sequin_redis_data:
-  sequin_grafana_data:
-  kafka-data:
+  # rag-worker:
+  #   container_name: rag_worker
+  #   image: node:20
+  #   working_dir: /app
+  #   command: bash -lc "corepack enable && pnpm worker:rag"
+  #   volumes:
+  #     - .:/app
+  #   env_file:
+  #     - .env
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - postgres-db
+  #   networks: [ai-net]
+

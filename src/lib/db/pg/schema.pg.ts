@@ -13,11 +13,24 @@ import {
   varchar,
   index,
   integer,
+  pgEnum,
 } from "drizzle-orm/pg-core";
+import { vector } from "drizzle-orm/pg-core/columns/vector_extension/vector";
 import { isNotNull } from "drizzle-orm";
 import { DBWorkflow, DBEdge, DBNode } from "app-types/workflow";
 import { UIMessage } from "ai";
 import { ChatMetadata } from "app-types/chat";
+
+export const knowledgeBaseDocumentStatusEnum = pgEnum(
+  "knowledge_base_document_status",
+  ["pending", "processing", "completed", "failed"],
+);
+
+export const embeddingOperationEnum = pgEnum("embedding_usage_operation", [
+  "ingest",
+  "query",
+  "delete",
+]);
 
 export const ChatThreadSchema = pgTable("chat_thread", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
@@ -201,6 +214,113 @@ export const OrganizationMemberSchema = pgTable(
   ],
 );
 
+export const KnowledgeBaseSchema = pgTable(
+  "knowledge_base",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    name: text("name").notNull(),
+    description: text("description"),
+    visibility: varchar("visibility", {
+      enum: ["public", "private", "readonly"],
+    })
+      .notNull()
+      .default("private"),
+    ownerUserId: uuid("owner_user_id")
+      .notNull()
+      .references(() => UserSchema.id, { onDelete: "cascade" }),
+    organizationId: uuid("organization_id").references(
+      () => OrganizationSchema.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    createdAt: timestamp("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    unique("knowledge_base_owner_name_unique").on(
+      table.ownerUserId,
+      table.name,
+    ),
+    index("knowledge_base_org_idx").on(table.organizationId),
+    index("knowledge_base_visibility_idx").on(table.visibility),
+  ],
+);
+
+export const KnowledgeBaseDocumentSchema = pgTable(
+  "knowledge_base_document",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    knowledgeBaseId: uuid("knowledge_base_id")
+      .notNull()
+      .references(() => KnowledgeBaseSchema.id, { onDelete: "cascade" }),
+    uploadedByUserId: uuid("uploaded_by_user_id").references(
+      () => UserSchema.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    organizationId: uuid("organization_id").references(
+      () => OrganizationSchema.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    fileName: text("file_name").notNull(),
+    fileSize: integer("file_size").notNull().default(0),
+    mimeType: text("mime_type").notNull(),
+    storageKey: text("storage_key").notNull(),
+    checksum: text("checksum"),
+    status: knowledgeBaseDocumentStatusEnum("status")
+      .notNull()
+      .default("pending"),
+    error: text("error"),
+    chunkCount: integer("chunk_count").notNull().default(0),
+    embeddingTokens: integer("embedding_tokens").notNull().default(0),
+    processedAt: timestamp("processed_at"),
+    createdAt: timestamp("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    unique("knowledge_base_document_storage_key_unique").on(table.storageKey),
+    index("knowledge_base_document_kb_idx").on(table.knowledgeBaseId),
+    index("knowledge_base_document_status_idx").on(table.status),
+  ],
+);
+
+export const KnowledgeBaseDocumentChunkSchema = pgTable(
+  "knowledge_base_document_chunk",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => KnowledgeBaseDocumentSchema.id, {
+        onDelete: "cascade",
+      }),
+    knowledgeBaseId: uuid("knowledge_base_id")
+      .notNull()
+      .references(() => KnowledgeBaseSchema.id, { onDelete: "cascade" }),
+    chunkIndex: integer("chunk_index").notNull(),
+    content: text("content").notNull(),
+    embedding: vector("embedding", { dimensions: 1536 }).notNull(),
+    createdAt: timestamp("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("knowledge_base_chunk_document_idx").on(table.documentId),
+    index("knowledge_base_chunk_kb_idx").on(table.knowledgeBaseId),
+  ],
+);
+
 export const OrganizationMcpServerSchema = pgTable(
   "organization_mcp_server",
   {
@@ -222,6 +342,30 @@ export const OrganizationMcpServerSchema = pgTable(
     ),
     index("organization_mcp_org_idx").on(table.organizationId),
     index("organization_mcp_server_idx").on(table.mcpServerId),
+  ],
+);
+
+export const AgentKnowledgeBaseSchema = pgTable(
+  "agent_knowledge_base",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => AgentSchema.id, { onDelete: "cascade" }),
+    knowledgeBaseId: uuid("knowledge_base_id")
+      .notNull()
+      .references(() => KnowledgeBaseSchema.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    unique("agent_knowledge_base_unique").on(
+      table.agentId,
+      table.knowledgeBaseId,
+    ),
+    index("agent_knowledge_base_agent_idx").on(table.agentId),
+    index("agent_knowledge_base_kb_idx").on(table.knowledgeBaseId),
   ],
 );
 
@@ -301,6 +445,46 @@ export const ToolUsageLogSchema = pgTable(
     unique("tool_usage_call_unique").on(table.toolCallId),
     index("tool_usage_user_idx").on(table.userId),
     index("tool_usage_mcp_idx").on(table.mcpServerId),
+  ],
+);
+
+export const EmbeddingUsageLogSchema = pgTable(
+  "embedding_usage_log",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => UserSchema.id, { onDelete: "cascade" }),
+    organizationId: uuid("organization_id").references(
+      () => OrganizationSchema.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    agentId: uuid("agent_id").references(() => AgentSchema.id, {
+      onDelete: "set null",
+    }),
+    knowledgeBaseId: uuid("knowledge_base_id").references(
+      () => KnowledgeBaseSchema.id,
+      { onDelete: "set null" },
+    ),
+    documentId: uuid("document_id").references(
+      () => KnowledgeBaseDocumentSchema.id,
+      { onDelete: "set null" },
+    ),
+    operation: embeddingOperationEnum("operation").notNull(),
+    tokens: integer("tokens").notNull().default(0),
+    model: text("model").notNull(),
+    metadata: json("metadata"),
+    createdAt: timestamp("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("embedding_usage_user_idx").on(table.userId),
+    index("embedding_usage_agent_idx").on(table.agentId),
+    index("embedding_usage_kb_idx").on(table.knowledgeBaseId),
+    index("embedding_usage_org_idx").on(table.organizationId),
   ],
 );
 
