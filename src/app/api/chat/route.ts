@@ -12,7 +12,11 @@ import { customModelProvider, isToolCallUnsupportedModel } from "lib/ai/models";
 
 import { mcpClientsManager } from "lib/ai/mcp/mcp-manager";
 
-import { agentRepository, chatRepository } from "lib/db/repository";
+import {
+  agentRepository,
+  chatRepository,
+  knowledgeBaseRepository,
+} from "lib/db/repository";
 import globalLogger from "logger";
 import {
   buildMcpServerCustomizationsSystemPrompt,
@@ -44,9 +48,11 @@ import { colorize } from "consola/utils";
 import { generateUUID, objectFlow } from "lib/utils";
 import {
   buildToolUsageLog,
+  logEmbeddingUsage,
   logModelUsageFromMetadata,
   logToolUsageBatch,
 } from "lib/analytics/usage-logger";
+import { embedQuery } from "lib/rag/embedder";
 import { ToolUsageLogInsert } from "app-types/analytics";
 import { VercelAIMcpTool } from "app-types/mcp";
 
@@ -57,6 +63,14 @@ type PendingToolUsage = Omit<ToolUsageLogInsert, "messageId" | "threadId"> & {
 const logger = globalLogger.withDefaults({
   message: colorize("blackBright", `Chat API: `),
 });
+
+function extractPlainTextFromMessage(message: UIMessage): string {
+  return message.parts
+    .filter((part) => part.type === "text")
+    .map((part) => (part as { type: "text"; text: string }).text)
+    .join("\n")
+    .trim();
+}
 
 export async function POST(request: Request) {
   try {
@@ -119,6 +133,81 @@ export async function POST(request: Request) {
       mentions.push(...agent.instructions.mentions);
     }
 
+    const knowledgeBaseIds =
+      agent?.knowledgeBases?.map((kb) => kb.id).filter(Boolean) ?? [];
+
+    let knowledgeBaseMetadata: ChatMetadata["knowledgeBase"] | undefined;
+
+    if (knowledgeBaseIds.length) {
+      const queryText = extractPlainTextFromMessage(message);
+      if (queryText) {
+        const { embeddings, tokens } = await embedQuery(queryText);
+        const embeddingVector = embeddings.at(0);
+
+        if (embeddingVector) {
+          const searchResults =
+            await knowledgeBaseRepository.searchKnowledgeBaseChunks({
+              knowledgeBaseIds,
+              embedding: embeddingVector,
+              limit: 6,
+            });
+
+          if (searchResults.length) {
+            knowledgeBaseMetadata = {
+              knowledgeBaseIds,
+              retrievedChunks: searchResults.map((chunk) => ({
+                knowledgeBaseId: chunk.knowledgeBaseId,
+                documentId: chunk.documentId,
+                documentName: chunk.documentName,
+                score: chunk.score,
+              })),
+            };
+
+            const contextText = searchResults
+              .map(
+                (chunk, index) =>
+                  `Source ${index + 1} (Knowledge Base ${chunk.knowledgeBaseId}, Document: ${chunk.documentName}):\n${chunk.content}`,
+              )
+              .join("\n\n---\n\n");
+
+            messages.splice(messages.length - 1, 0, {
+              id: generateUUID(),
+              role: "system",
+              parts: [
+                {
+                  type: "text",
+                  text: `The following context was retrieved from linked knowledge bases. Use it only when relevant and cite the document title when referencing it.\n\n${contextText}`,
+                },
+              ],
+            });
+
+            if (tokens > 0) {
+              await logEmbeddingUsage({
+                userId: session.user.id,
+                agentId: agent?.id ?? null,
+                knowledgeBaseId:
+                  knowledgeBaseIds.length === 1 ? knowledgeBaseIds[0] : null,
+                organizationId: agent?.organizationId ?? null,
+                documentId: null,
+                operation: "query",
+                tokens,
+                model: "text-embedding-3-small",
+                metadata: {
+                  knowledgeBaseIds,
+                  retrievedDocuments: searchResults.map((chunk) => ({
+                    knowledgeBaseId: chunk.knowledgeBaseId,
+                    documentId: chunk.documentId,
+                    documentName: chunk.documentName,
+                    score: chunk.score,
+                  })),
+                },
+              });
+            }
+          }
+        }
+      }
+    }
+
     const isToolCallAllowed =
       supportToolCall && (toolChoice != "none" || mentions.length > 0);
 
@@ -128,6 +217,10 @@ export async function POST(request: Request) {
       toolCount: 0,
       chatModel: chatModel,
     };
+
+    if (knowledgeBaseMetadata) {
+      metadata.knowledgeBase = knowledgeBaseMetadata;
+    }
 
     const pendingToolUsage: PendingToolUsage[] = [];
 

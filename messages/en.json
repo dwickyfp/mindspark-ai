@@ -477,6 +477,8 @@
     "tokenBreakdownTotal": "Total tokens",
     "tokenBreakdownInput": "Input tokens",
     "tokenBreakdownOutput": "Output tokens",
+    "tokenBreakdownEmbedding": "Embedding tokens",
+    "tokenBreakdownEmbeddingHelper": "Knowledge base ingestion and retrieval",
     "tokenBreakdownQueries": "Total queries",
     "favoriteToolsTitle": "Favorite tools",
     "favoriteToolsEmpty": "No tool usage recorded yet.",
@@ -557,7 +559,94 @@
     "publicDescription": "Anyone can view, edit, and use this agent as a tool.",
     "sharedFromOrganization": "Shared by {organization}",
     "sharedWithSingleOrganization": "Shared with {organization}",
-    "sharedWithMultipleOrganizations": "Shared with {count} organizations"
+    "sharedWithMultipleOrganizations": "Shared with {count} organizations",
+    "knowledgeBaseLabel": "Attach knowledge bases",
+    "knowledgeBaseHelper": "Linked knowledge bases give this agent searchable context during conversations.",
+    "knowledgeBaseDocuments": "{count, plural, one {# document} other {# documents}}",
+    "knowledgeBaseEmpty": "No knowledge bases available yet.",
+    "knowledgeBaseUsageTitle": "Embedding usage",
+    "knowledgeBaseUsageDescription": "Track how many embedding tokens this agent has consumed.",
+    "knowledgeBaseUsageByUser": "Tokens by user",
+    "knowledgeBaseUsageByOrganization": "Tokens by organization",
+    "knowledgeBaseUsageEmpty": "No embedding usage recorded for this agent yet.",
+    "knowledgeBaseUsageEmptyUser": "No user activity recorded.",
+    "knowledgeBaseUsageEmptyOrg": "No organization activity recorded."
+  },
+  "KnowledgeBase": {
+    "title": "Knowledge Base",
+    "subtitle": "Organize documents, track processing, and connect knowledge to your agents.",
+    "actions": {
+      "newKnowledgeBase": "New Knowledge Base",
+      "refresh": "Refresh",
+      "uploadDocument": "Upload Document",
+      "deleteKnowledgeBase": "Delete Knowledge Base",
+      "deleteDocument": "Delete",
+      "cancel": "Cancel",
+      "create": "Create"
+    },
+    "list": {
+      "heading": "Your Knowledge Bases",
+      "noDescription": "No description provided",
+      "empty": "You haven't created any knowledge bases yet."
+    },
+    "detail": {
+      "placeholderTitle": "Select a knowledge base",
+      "placeholderDescription": "Choose a knowledge base from the list to manage documents and settings.",
+      "settings": "Settings",
+      "settingsDescription": "Rename, describe, or adjust visibility for this knowledge base.",
+      "metrics": {
+        "totalDocuments": "Total",
+        "pending": "Pending",
+        "processing": "Processing",
+        "completed": "Completed"
+      }
+    },
+    "documents": {
+      "heading": "Documents",
+      "description": "Upload files to add searchable context. Documents are embedded asynchronously.",
+      "table": {
+        "name": "Document",
+        "size": "Size",
+        "status": "Status",
+        "tokens": "Embedding Tokens",
+        "actions": "Actions"
+      },
+      "empty": "No documents uploaded yet."
+    },
+    "form": {
+      "name": "Name",
+      "description": "Description",
+      "visibility": "Visibility",
+      "namePlaceholder": "Acme knowledge base"
+    },
+    "visibility": {
+      "private": "Private",
+      "readonly": "Read-only",
+      "public": "Public"
+    },
+    "dialog": {
+      "createTitle": "Create knowledge base",
+      "createDescription": "Give your knowledge base a name and optional description.",
+      "deleteTitle": "Delete knowledge base"
+    },
+    "messages": {
+      "created": "Knowledge base created",
+      "updated": "Knowledge base updated",
+      "deleted": "Knowledge base deleted",
+      "documentUploaded": "Uploaded {file}",
+      "documentDeleted": "Document removed",
+      "documentRenamed": "Document renamed"
+    },
+    "confirm": {
+      "deleteKnowledgeBase": "Delete this knowledge base and all associated documents?",
+      "deleteDocument": "Delete {file}?"
+    },
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed"
+    }
   },
   "KeyboardShortcuts": {
     "title": "Keyboard Shortcuts",

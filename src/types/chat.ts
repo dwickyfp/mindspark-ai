@@ -10,6 +10,15 @@ export type ChatMetadata = {
   toolChoice?: "auto" | "none" | "manual";
   toolCount?: number;
   agentId?: string;
+  knowledgeBase?: {
+    knowledgeBaseIds: string[];
+    retrievedChunks: Array<{
+      knowledgeBaseId: string;
+      documentId: string;
+      documentName: string;
+      score: number;
+    }>;
+  };
 };
 
 export type ChatModel = {

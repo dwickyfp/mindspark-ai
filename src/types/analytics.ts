@@ -55,6 +55,7 @@ export type TokenUsageTotals = {
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
+  embeddingTokens: number;
 };
 
 export type DailyUsageStat = {
@@ -69,9 +70,35 @@ export type UserUsageSummary = {
   daily: DailyUsageStat[];
 };
 
+export type EmbeddingUsageLogInsert = {
+  userId: string;
+  organizationId?: string | null;
+  agentId?: string | null;
+  knowledgeBaseId?: string | null;
+  documentId?: string | null;
+  operation: "ingest" | "query" | "delete";
+  tokens: number;
+  model: string;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type AgentEmbeddingUsageSummary = {
+  byUser: Array<{
+    userId: string;
+    userName?: string | null;
+    tokens: number;
+  }>;
+  byOrganization: Array<{
+    organizationId: string;
+    organizationName?: string | null;
+    tokens: number;
+  }>;
+};
+
 export type UsageLogRepository = {
   upsertModelUsage: (log: ModelUsageLogInsert) => Promise<void>;
   bulkUpsertToolUsage: (logs: ToolUsageLogInsert[]) => Promise<void>;
+  logEmbeddingUsage: (log: EmbeddingUsageLogInsert) => Promise<void>;
   getModelUsageAggregatesForUsers: (
     userIds: string[],
   ) => Promise<ModelUsageAggregate[]>;
@@ -79,13 +106,14 @@ export type UsageLogRepository = {
   getToolUsageAggregatesForUsers: (
     userIds: string[],
   ) => Promise<ToolUsageAggregate[]>;
-  getAgentUsageForUsers: (
-    userIds: string[],
-  ) => Promise<AgentUsageAnalytics>;
+  getAgentUsageForUsers: (userIds: string[]) => Promise<AgentUsageAnalytics>;
   getUserUsageSummary: (
     userId: string,
     options?: {
       days?: number;
     },
   ) => Promise<UserUsageSummary>;
+  getEmbeddingUsageSummaryForAgent: (
+    agentId: string,
+  ) => Promise<AgentEmbeddingUsageSummary>;
 };

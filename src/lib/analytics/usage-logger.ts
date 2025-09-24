@@ -1,5 +1,9 @@
 import { ChatMetadata } from "app-types/chat";
-import { ModelUsageLogInsert, ToolUsageLogInsert } from "app-types/analytics";
+import {
+  EmbeddingUsageLogInsert,
+  ModelUsageLogInsert,
+  ToolUsageLogInsert,
+} from "app-types/analytics";
 import { usageLogRepository } from "lib/db/repository";
 
 export async function logModelUsageFromMetadata(options: {
@@ -32,6 +36,12 @@ export async function logToolUsageBatch(
 ): Promise<void> {
   if (!logs.length) return;
   await usageLogRepository.bulkUpsertToolUsage(logs);
+}
+
+export async function logEmbeddingUsage(
+  log: EmbeddingUsageLogInsert,
+): Promise<void> {
+  await usageLogRepository.logEmbeddingUsage(log);
 }
 
 export function buildToolUsageLog(options: {

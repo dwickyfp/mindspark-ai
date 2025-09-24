@@ -17,7 +17,11 @@ import {
 } from "lucide-react";
 
 import { useUserAnalytics } from "@/hooks/queries/use-user-analytics";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 import { Badge } from "ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "ui/card";
 import { Skeleton } from "ui/skeleton";
@@ -28,8 +32,7 @@ function formatDateFromIso(input: string | null): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-const PAGE_CONTAINER_CLASS =
-  "mx-auto w-full max-w-6xl px-2 pb-12 pt-8";
+const PAGE_CONTAINER_CLASS = "mx-auto w-full max-w-6xl px-2 pb-12 pt-8";
 
 type MetricCardProps = {
   label: string;
@@ -80,11 +83,16 @@ function AnalyticsList({ title, items, emptyLabel }: AnalyticsListProps) {
         {items.length ? (
           <ul className="space-y-3 text-sm">
             {items.map((item) => (
-              <li key={item.id} className="flex items-start justify-between gap-3">
+              <li
+                key={item.id}
+                className="flex items-start justify-between gap-3"
+              >
                 <div className="space-y-0.5">
                   <p className="font-medium leading-none">{item.label}</p>
                   {item.helper ? (
-                    <p className="text-xs text-muted-foreground">{item.helper}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.helper}
+                    </p>
                   ) : null}
                 </div>
                 <span className="whitespace-nowrap text-sm font-semibold">
@@ -225,8 +233,12 @@ export default function UserAnalyticsDashboard() {
   }, [data, weekdayFormatter, fullDateFormatter]);
 
   const accountCreatedAt = formatDateFromIso(data?.account.createdAt ?? null);
-  const firstActivityAt = formatDateFromIso(data?.activity.firstActivityAt ?? null);
-  const lastActivityAt = formatDateFromIso(data?.activity.lastActivityAt ?? null);
+  const firstActivityAt = formatDateFromIso(
+    data?.activity.firstActivityAt ?? null,
+  );
+  const lastActivityAt = formatDateFromIso(
+    data?.activity.lastActivityAt ?? null,
+  );
 
   if (isLoading) {
     return <LoadingState />;
@@ -264,18 +276,22 @@ export default function UserAnalyticsDashboard() {
       : undefined,
   }));
 
-  const popularModels: AnalyticsListItem[] = data.popularModels.map((model) => ({
-    id: `${model.provider ?? "unknown"}-${model.model ?? "unknown"}`,
-    label: `${model.provider ?? t("unknownProvider")} / ${model.model ?? t("unknownModel")}`,
-    value: formatTokens(model.totalTokens),
-    helper: t("runsCount", { count: model.invocations }),
-  }));
+  const popularModels: AnalyticsListItem[] = data.popularModels.map(
+    (model) => ({
+      id: `${model.provider ?? "unknown"}-${model.model ?? "unknown"}`,
+      label: `${model.provider ?? t("unknownProvider")} / ${model.model ?? t("unknownModel")}`,
+      value: formatTokens(model.totalTokens),
+      helper: t("runsCount", { count: model.invocations }),
+    }),
+  );
 
   const accountInsights = [
     {
       id: "account-created",
       label: t("accountCreated"),
-      value: accountCreatedAt ? fullDateFormatter.format(accountCreatedAt) : t("noData"),
+      value: accountCreatedAt
+        ? fullDateFormatter.format(accountCreatedAt)
+        : t("noData"),
     },
     {
       id: "account-age",
@@ -298,12 +314,16 @@ export default function UserAnalyticsDashboard() {
     {
       id: "first-activity",
       label: t("firstActivity"),
-      value: firstActivityAt ? fullDateFormatter.format(firstActivityAt) : t("noActivityYet"),
+      value: firstActivityAt
+        ? fullDateFormatter.format(firstActivityAt)
+        : t("noActivityYet"),
     },
     {
       id: "last-activity",
       label: t("lastActive"),
-      value: lastActivityAt ? fullDateFormatter.format(lastActivityAt) : t("noActivityYet"),
+      value: lastActivityAt
+        ? fullDateFormatter.format(lastActivityAt)
+        : t("noActivityYet"),
     },
     {
       id: "tool-actions",
@@ -320,9 +340,7 @@ export default function UserAnalyticsDashboard() {
   return (
     <div className={`${PAGE_CONTAINER_CLASS} flex flex-col gap-6`}>
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("title")}
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
@@ -340,7 +358,9 @@ export default function UserAnalyticsDashboard() {
         />
         <MetricCard
           label={t("summaryAverageTokens")}
-          value={decimalFormatter.format(data.totals.averageTokensPerQuery ?? 0)}
+          value={decimalFormatter.format(
+            data.totals.averageTokensPerQuery ?? 0,
+          )}
           helper={t("summaryAverageTokensHelper")}
           icon={GaugeCircle}
         />
@@ -361,7 +381,9 @@ export default function UserAnalyticsDashboard() {
                 {t("weeklyChartDescription")}
               </p>
             </div>
-            <Badge variant="outline">{t("lastDays", { count: weeklyChartData.length })}</Badge>
+            <Badge variant="outline">
+              {t("lastDays", { count: weeklyChartData.length })}
+            </Badge>
           </CardHeader>
           <CardContent className="pt-2">
             {weeklyChartData.length ? (
@@ -394,7 +416,11 @@ export default function UserAnalyticsDashboard() {
                       />
                     }
                   />
-                  <Bar dataKey="queries" fill="var(--color-queries)" radius={8} />
+                  <Bar
+                    dataKey="queries"
+                    fill="var(--color-queries)"
+                    radius={8}
+                  />
                 </BarChart>
               </ChartContainer>
             ) : (
@@ -423,6 +449,11 @@ export default function UserAnalyticsDashboard() {
             <TokenStat
               label={t("tokenBreakdownOutput")}
               value={formatTokens(data.totals.outputTokens)}
+            />
+            <TokenStat
+              label={t("tokenBreakdownEmbedding")}
+              value={formatTokens(data.totals.embeddingTokens)}
+              helper={t("tokenBreakdownEmbeddingHelper")}
             />
             <TokenStat
               label={t("tokenBreakdownQueries")}

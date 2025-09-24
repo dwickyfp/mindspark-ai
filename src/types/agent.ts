@@ -28,6 +28,7 @@ export const AgentCreateSchema = z
     userId: z.string(),
     instructions: AgentInstructionsSchema,
     visibility: VisibilitySchema.optional().default("private"),
+    knowledgeBaseIds: z.array(z.string().uuid()).optional().default([]),
   })
   .strip();
 export const AgentUpdateSchema = z
@@ -43,6 +44,7 @@ export const AgentUpdateSchema = z
       .optional(),
     instructions: AgentInstructionsSchema.optional(),
     visibility: VisibilitySchema.optional(),
+    knowledgeBaseIds: z.array(z.string().uuid()).optional(),
   })
   .strip();
 
@@ -70,9 +72,16 @@ export type AgentSummary = {
   scope?: "personal" | "organization" | "public" | "readonly";
   organizationId?: string;
   organizationName?: string;
+  knowledgeBases?: AgentKnowledgeBaseLink[];
+  knowledgeBaseIds?: string[];
 };
 
 export type AgentOrganizationShare = {
+  id: string;
+  name: string;
+};
+
+export type AgentKnowledgeBaseLink = {
   id: string;
   name: string;
 };
