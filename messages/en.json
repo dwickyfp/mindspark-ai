@@ -579,10 +579,14 @@
       "newKnowledgeBase": "New Knowledge Base",
       "refresh": "Refresh",
       "uploadDocument": "Upload Document",
+      "importFromUrl": "Import from URL",
       "deleteKnowledgeBase": "Delete Knowledge Base",
       "deleteDocument": "Delete",
       "cancel": "Cancel",
-      "create": "Create"
+      "create": "Create",
+      "import": "Import",
+      "uploading": "Uploading...",
+      "importing": "Importing..."
     },
     "list": {
       "heading": "Your Knowledge Bases",
@@ -613,13 +617,25 @@
         "tokens": "Embedding Tokens",
         "actions": "Actions"
       },
-      "empty": "No documents uploaded yet."
+      "empty": "No documents uploaded yet.",
+      "upload": {
+        "title": "Upload from your device",
+        "description": "Drag in files or choose to upload PDF, DOCX, or TXT files.",
+        "note": "Maximum file size 25 MB."
+      },
+      "import": {
+        "title": "Import from a website",
+        "description": "We crawl the page with Exa and add the extracted text as a document.",
+        "note": "Supports public URLs. Private or authenticated pages may not be accessible."
+      }
     },
     "form": {
       "name": "Name",
       "description": "Description",
       "visibility": "Visibility",
-      "namePlaceholder": "Acme knowledge base"
+      "namePlaceholder": "Acme knowledge base",
+      "url": "URL",
+      "urlPlaceholder": "https://example.com/docs"
     },
     "visibility": {
       "private": "Private",
@@ -629,7 +645,9 @@
     "dialog": {
       "createTitle": "Create knowledge base",
       "createDescription": "Give your knowledge base a name and optional description.",
-      "deleteTitle": "Delete knowledge base"
+      "deleteTitle": "Delete knowledge base",
+      "importFromUrlTitle": "Add website content",
+      "importFromUrlDescription": "Use Exa to crawl a URL and add its text as a document."
     },
     "messages": {
       "created": "Knowledge base created",
@@ -637,7 +655,8 @@
       "deleted": "Knowledge base deleted",
       "documentUploaded": "Uploaded {file}",
       "documentDeleted": "Document removed",
-      "documentRenamed": "Document renamed"
+      "documentRenamed": "Document renamed",
+      "importQueued": "Website import queued"
     },
     "confirm": {
       "deleteKnowledgeBase": "Delete this knowledge base and all associated documents?",

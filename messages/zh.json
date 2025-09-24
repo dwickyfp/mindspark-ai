@@ -345,10 +345,14 @@
       "newKnowledgeBase": "新知识库",
       "refresh": "刷新",
       "uploadDocument": "上传文档",
+      "importFromUrl": "从 URL 导入",
       "deleteKnowledgeBase": "删除知识库",
       "deleteDocument": "删除",
       "cancel": "取消",
-      "create": "创建"
+      "create": "创建",
+      "import": "导入",
+      "uploading": "正在上传...",
+      "importing": "正在导入..."
     },
     "list": {
       "heading": "您的知识库",
@@ -379,13 +383,25 @@
         "tokens": "嵌入令牌",
         "actions": "操作"
       },
-      "empty": "尚未上传任何文档。"
+      "empty": "尚未上传任何文档。",
+      "upload": {
+        "title": "从设备上传",
+        "description": "拖拽文件或选择 PDF、DOCX、TXT 文件。",
+        "note": "最大文件大小 25 MB。"
+      },
+      "import": {
+        "title": "从网站导入",
+        "description": "我们使用 Exa 爬取页面并将提取的文本添加为文档。",
+        "note": "仅支持公共 URL，私有或需登录的页面可能无法访问。"
+      }
     },
     "form": {
       "name": "名称",
       "description": "描述",
       "visibility": "可见性",
-      "namePlaceholder": "Acme 知识库"
+      "namePlaceholder": "Acme 知识库",
+      "url": "URL",
+      "urlPlaceholder": "https://example.com/docs"
     },
     "visibility": {
       "private": "私有",
@@ -395,7 +411,9 @@
     "dialog": {
       "createTitle": "创建知识库",
       "createDescription": "为您的知识库命名并可选添加描述。",
-      "deleteTitle": "删除知识库"
+      "deleteTitle": "删除知识库",
+      "importFromUrlTitle": "添加网站内容",
+      "importFromUrlDescription": "使用 Exa 爬取 URL 并将文本添加为文档。"
     },
     "messages": {
       "created": "知识库已创建",
@@ -403,7 +421,8 @@
       "deleted": "知识库已删除",
       "documentUploaded": "已上传 {file}",
       "documentDeleted": "文档已删除",
-      "documentRenamed": "文档已重命名"
+      "documentRenamed": "文档已重命名",
+      "importQueued": "网站导入已排队。"
     },
     "confirm": {
       "deleteKnowledgeBase": "删除此知识库及其所有相关文档？",

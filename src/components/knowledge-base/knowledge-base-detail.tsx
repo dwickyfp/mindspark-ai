@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  DragEvent,
+  FormEvent,
+  KeyboardEvent,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useSWRConfig } from "swr";
@@ -15,7 +23,7 @@ import { useKnowledgeBaseDetail } from "@/hooks/queries/use-knowledge-bases";
 import { handleErrorWithToast } from "ui/shared-toast";
 import { Button } from "ui/button";
 import { Badge } from "ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "ui/card";
 import { Input } from "ui/input";
 import { Textarea } from "ui/textarea";
 import {
@@ -31,6 +39,7 @@ import {
   ArrowLeft,
   FileText,
   Loader2,
+  Globe,
   RefreshCw,
   Trash2,
   Upload,
@@ -82,6 +91,10 @@ export default function KnowledgeBaseDetail({
 
   const [isSaving, setIsSaving] = useState(false);
   const [refreshingDocument, setRefreshingDocument] = useState(false);
+  const [importUrl, setImportUrl] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const {
     data: detail,
@@ -159,6 +172,7 @@ export default function KnowledgeBaseDetail({
       formData.append("file", file);
 
       try {
+        setIsUploading(true);
         const response = await fetch(
           `/api/knowledge-base/${knowledgeBaseId}/documents`,
           {
@@ -178,6 +192,8 @@ export default function KnowledgeBaseDetail({
         handleErrorWithToast(
           error instanceof Error ? error : new Error(String(error)),
         );
+      } finally {
+        setIsUploading(false);
       }
     },
     [knowledgeBaseId, mutateCache, mutateDetail, t],
@@ -254,6 +270,75 @@ export default function KnowledgeBaseDetail({
     }
   }, [mutateDetail]);
 
+  const handleDropZoneClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleDropZoneKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        handleDropZoneClick();
+      }
+    },
+    [handleDropZoneClick],
+  );
+
+  const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      setIsDragging(false);
+      const file = event.dataTransfer.files?.[0] ?? null;
+      void handleUploadDocument(file);
+    },
+    [handleUploadDocument],
+  );
+
+  const handleImportFromUrl = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!importUrl.trim()) return;
+      try {
+        setIsImporting(true);
+        const response = await fetch(
+          `/api/knowledge-base/${knowledgeBaseId}/web`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url: importUrl.trim() }),
+          },
+        );
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload?.error ?? "Failed to import website content");
+        }
+
+        await Promise.all([mutateDetail(), mutateCache("/api/knowledge-base")]);
+        toast.success(t("messages.importQueued"));
+        setImportUrl("");
+      } catch (error) {
+        handleErrorWithToast(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      } finally {
+        setIsImporting(false);
+      }
+    },
+    [importUrl, knowledgeBaseId, mutateCache, mutateDetail, t],
+  );
+
   const documentStatusGroups = useMemo(() => {
     const groups = {
       completed: 0,
@@ -270,304 +355,400 @@ export default function KnowledgeBaseDetail({
     return groups;
   }, [documents]);
 
-  const handleFilePicker = () => {
-    fileInputRef.current?.click();
-  };
-
   const visibility = knowledgeBase?.visibility ?? "private";
 
   return (
-    <ScrollArea className="h-full w-full">
-      <div className="mx-auto flex h-full max-w-5xl flex-col gap-6 px-6 py-8">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Link
-            href="/knowledge-base"
-            className="flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs font-medium transition hover:bg-muted"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {tCommon("back")}
-          </Link>
-        </div>
-
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-semibold">
-              {knowledgeBase?.name ?? t("detail.placeholderTitle")}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {knowledgeBase?.description || t("detail.placeholderDescription")}
-            </p>
-            <Badge variant="secondary" className="uppercase tracking-wide">
-              {t(`visibility.${visibility}`)}
-            </Badge>
+    <>
+      <ScrollArea className="h-full w-full">
+        <div className="mx-auto flex h-full max-w-5xl flex-col gap-6 px-6 py-8">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Link
+              href="/knowledge-base"
+              className="flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs font-medium transition hover:bg-muted"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {tCommon("back")}
+            </Link>
           </div>
-          <Button
-            variant="destructive"
-            onClick={handleDeleteKnowledgeBase}
-            disabled={isSaving}
-            className="gap-2"
-          >
-            <Trash2 className="h-4 w-4" />
-            {t("actions.deleteKnowledgeBase")}
-          </Button>
-        </div>
 
-        {isLoading && !knowledgeBase ? (
-          <div className="flex flex-1 items-center justify-center py-24">
-            <Loader2 className="h-8 w-8 animate-spin" />
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold">
+                {knowledgeBase?.name ?? t("detail.placeholderTitle")}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {knowledgeBase?.description ||
+                  t("detail.placeholderDescription")}
+              </p>
+              <Badge variant="secondary" className="uppercase tracking-wide">
+                {t(`visibility.${visibility}`)}
+              </Badge>
+            </div>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteKnowledgeBase}
+              disabled={isSaving}
+              className="gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              {t("actions.deleteKnowledgeBase")}
+            </Button>
           </div>
-        ) : knowledgeBase ? (
-          <div className="flex flex-col gap-8 pb-10">
-            <Card className="border-border/60">
-              <CardHeader>
-                <CardTitle className="text-base font-semibold">
-                  {t("detail.settings")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <p className="text-sm text-muted-foreground">
-                  {t("detail.settingsDescription")}
-                </p>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="kb-name">
-                      {t("form.name")}
-                    </label>
-                    <Input
-                      id="kb-name"
-                      defaultValue={knowledgeBase.name}
-                      onBlur={(event) =>
-                        handleUpdateKnowledgeBase({
-                          name: event.currentTarget.value.trim(),
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label
-                      className="text-sm font-medium"
-                      htmlFor="kb-visibility"
-                    >
-                      {t("form.visibility")}
-                    </label>
-                    <Select
-                      defaultValue={visibility}
-                      onValueChange={(value) =>
-                        handleUpdateKnowledgeBase({
-                          visibility:
-                            value as KnowledgeBaseFormState["visibility"],
-                        })
-                      }
-                    >
-                      <SelectTrigger id="kb-visibility">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="private">
-                          {t("visibility.private")}
-                        </SelectItem>
-                        <SelectItem value="readonly">
-                          {t("visibility.readonly")}
-                        </SelectItem>
-                        <SelectItem value="public">
-                          {t("visibility.public")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <label
-                      className="text-sm font-medium"
-                      htmlFor="kb-description"
-                    >
-                      {t("form.description")}
-                    </label>
-                    <Textarea
-                      id="kb-description"
-                      defaultValue={knowledgeBase.description ?? ""}
-                      rows={3}
-                      onBlur={(event) =>
-                        handleUpdateKnowledgeBase({
-                          description: event.currentTarget.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
 
-                <div className="grid gap-3 sm:grid-cols-4">
-                  <Card className="border-dashed border-border/60 bg-muted/40 p-3">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      {t("detail.metrics.totalDocuments")}
-                    </p>
-                    <p className="text-xl font-semibold">
-                      {knowledgeBase.documentCount}
-                    </p>
-                  </Card>
-                  <Card className="border-dashed border-border/60 bg-muted/40 p-3">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      {t("detail.metrics.pending")}
-                    </p>
-                    <p className="text-xl font-semibold">
-                      {documentStatusGroups.pending}
-                    </p>
-                  </Card>
-                  <Card className="border-dashed border-border/60 bg-muted/40 p-3">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      {t("detail.metrics.processing")}
-                    </p>
-                    <p className="text-xl font-semibold">
-                      {documentStatusGroups.processing}
-                    </p>
-                  </Card>
-                  <Card className="border-dashed border-border/60 bg-muted/40 p-3">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      {t("detail.metrics.completed")}
-                    </p>
-                    <p className="text-xl font-semibold">
-                      {documentStatusGroups.completed}
-                    </p>
-                  </Card>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/60">
-              <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
+          {isLoading && !knowledgeBase ? (
+            <div className="flex flex-1 items-center justify-center py-24">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : knowledgeBase ? (
+            <div className="flex flex-col gap-8 pb-10">
+              <Card className="border-border/60">
+                <CardHeader>
                   <CardTitle className="text-base font-semibold">
-                    {t("documents.heading")}
+                    {t("detail.settings")}
                   </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
                   <p className="text-sm text-muted-foreground">
-                    {t("documents.description")}
+                    {t("detail.settingsDescription")}
                   </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={refreshDocuments}
-                    disabled={refreshingDocument}
-                    className="gap-2"
-                  >
-                    <RefreshCw
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium" htmlFor="kb-name">
+                        {t("form.name")}
+                      </label>
+                      <Input
+                        id="kb-name"
+                        defaultValue={knowledgeBase.name}
+                        onBlur={(event) =>
+                          handleUpdateKnowledgeBase({
+                            name: event.currentTarget.value.trim(),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        className="text-sm font-medium"
+                        htmlFor="kb-visibility"
+                      >
+                        {t("form.visibility")}
+                      </label>
+                      <Select
+                        defaultValue={visibility}
+                        onValueChange={(value) =>
+                          handleUpdateKnowledgeBase({
+                            visibility:
+                              value as KnowledgeBaseFormState["visibility"],
+                          })
+                        }
+                      >
+                        <SelectTrigger id="kb-visibility">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="private">
+                            {t("visibility.private")}
+                          </SelectItem>
+                          <SelectItem value="readonly">
+                            {t("visibility.readonly")}
+                          </SelectItem>
+                          <SelectItem value="public">
+                            {t("visibility.public")}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <label
+                        className="text-sm font-medium"
+                        htmlFor="kb-description"
+                      >
+                        {t("form.description")}
+                      </label>
+                      <Textarea
+                        id="kb-description"
+                        defaultValue={knowledgeBase.description ?? ""}
+                        rows={3}
+                        onBlur={(event) =>
+                          handleUpdateKnowledgeBase({
+                            description: event.currentTarget.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-4">
+                    <Card className="border-dashed border-border/60 bg-muted/40 p-3">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {t("detail.metrics.totalDocuments")}
+                      </p>
+                      <p className="text-xl font-semibold">
+                        {knowledgeBase.documentCount}
+                      </p>
+                    </Card>
+                    <Card className="border-dashed border-border/60 bg-muted/40 p-3">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {t("detail.metrics.pending")}
+                      </p>
+                      <p className="text-xl font-semibold">
+                        {documentStatusGroups.pending}
+                      </p>
+                    </Card>
+                    <Card className="border-dashed border-border/60 bg-muted/40 p-3">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {t("detail.metrics.processing")}
+                      </p>
+                      <p className="text-xl font-semibold">
+                        {documentStatusGroups.processing}
+                      </p>
+                    </Card>
+                    <Card className="border-dashed border-border/60 bg-muted/40 p-3">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {t("detail.metrics.completed")}
+                      </p>
+                      <p className="text-xl font-semibold">
+                        {documentStatusGroups.completed}
+                      </p>
+                    </Card>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/60">
+                <CardHeader className="gap-2">
+                  <div>
+                    <CardTitle className="text-base font-semibold">
+                      {t("documents.heading")}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {t("documents.description")}
+                    </p>
+                  </div>
+                  <CardAction>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={refreshDocuments}
+                      disabled={refreshingDocument}
+                      className="gap-2"
+                    >
+                      <RefreshCw
+                        className={cn(
+                          "h-4 w-4",
+                          refreshingDocument && "animate-spin",
+                        )}
+                      />
+                      {t("actions.refresh")}
+                    </Button>
+                  </CardAction>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={handleDropZoneClick}
+                      onKeyDown={handleDropZoneKeyDown}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
                       className={cn(
-                        "h-4 w-4",
-                        refreshingDocument && "animate-spin",
+                        "group rounded-xl border border-dashed border-border/60 bg-muted/20 p-6 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                        isDragging && "border-primary bg-primary/5",
                       )}
-                    />
-                    {t("actions.refresh")}
-                  </Button>
-                  <Button onClick={handleFilePicker} className="gap-2">
-                    <Upload className="h-4 w-4" />
-                    {t("actions.uploadDocument")}
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    hidden
-                    onChange={(event) => {
-                      const file = event.currentTarget.files?.[0] ?? null;
-                      void handleUploadDocument(file);
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="overflow-hidden rounded-lg border border-border/60">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
-                      <tr>
-                        <th className="px-4 py-3 font-medium">
-                          {t("documents.table.name")}
-                        </th>
-                        <th className="px-4 py-3 font-medium">
-                          {t("documents.table.size")}
-                        </th>
-                        <th className="px-4 py-3 font-medium">
-                          {t("documents.table.status")}
-                        </th>
-                        <th className="px-4 py-3 font-medium">
-                          {t("documents.table.tokens")}
-                        </th>
-                        <th className="px-4 py-3 font-medium text-right">
-                          {t("documents.table.actions")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {documents.map((document) => (
-                        <tr
-                          key={document.id}
-                          className="border-t border-border/40 text-sm"
+                      aria-label={t("actions.uploadDocument")}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-full bg-primary/10 p-2 text-primary">
+                          <Upload className="h-5 w-5" />
+                        </div>
+                        <div className="space-y-1">
+                          <h3 className="text-sm font-semibold">
+                            {t("documents.upload.title")}
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
+                            {t("documents.upload.description")}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <Button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDropZoneClick();
+                          }}
+                          disabled={isUploading}
+                          className="gap-2"
                         >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-muted-foreground" />
-                              <Input
-                                defaultValue={document.fileName}
-                                onBlur={(event) =>
-                                  handleRenameDocument(
-                                    document,
-                                    event.currentTarget.value.trim(),
-                                  )
-                                }
-                                className="max-w-sm"
-                              />
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {formatBytes(document.fileSize)}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge
-                              variant={
-                                STATUS_VARIANT[document.status] ?? "secondary"
-                              }
-                            >
-                              {t(`status.${document.status}`)}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {document.embeddingTokens}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleDeleteDocument(document)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">
-                                {t("actions.deleteDocument")}
-                              </span>
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                      {!documents.length ? (
+                          {isUploading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                          {isUploading
+                            ? t("actions.uploading")
+                            : t("actions.uploadDocument")}
+                        </Button>
+                        <p className="text-xs text-muted-foreground">
+                          {t("documents.upload.note")}
+                        </p>
+                      </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        hidden
+                        onChange={(event) => {
+                          const file = event.currentTarget.files?.[0] ?? null;
+                          event.currentTarget.value = "";
+                          void handleUploadDocument(file);
+                        }}
+                      />
+                    </div>
+
+                    <form
+                      onSubmit={handleImportFromUrl}
+                      className="flex h-full flex-col gap-4 rounded-xl border border-border/60 bg-muted/20 p-6"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-full bg-secondary/10 p-2 text-secondary-foreground">
+                          <Globe className="h-5 w-5" />
+                        </div>
+                        <div className="space-y-1">
+                          <h3 className="text-sm font-semibold">
+                            {t("documents.import.title")}
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
+                            {t("documents.import.description")}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-3 sm:flex-row">
+                        <Input
+                          value={importUrl}
+                          onChange={(event) =>
+                            setImportUrl(event.currentTarget.value)
+                          }
+                          placeholder={t("form.urlPlaceholder")}
+                          type="url"
+                          className="flex-1"
+                          autoComplete="off"
+                        />
+                        <Button
+                          type="submit"
+                          disabled={isImporting || !importUrl.trim()}
+                          className="gap-2"
+                        >
+                          {isImporting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Globe className="h-4 w-4" />
+                          )}
+                          {isImporting
+                            ? t("actions.importing")
+                            : t("actions.import")}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {t("documents.import.note")}
+                      </p>
+                    </form>
+                  </div>
+                  <div className="overflow-hidden rounded-lg border border-border/60">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
                         <tr>
-                          <td
-                            colSpan={5}
-                            className="px-4 py-10 text-center text-sm text-muted-foreground"
-                          >
-                            {t("documents.empty")}
-                          </td>
+                          <th className="px-4 py-3 font-medium">
+                            {t("documents.table.name")}
+                          </th>
+                          <th className="px-4 py-3 font-medium">
+                            {t("documents.table.size")}
+                          </th>
+                          <th className="px-4 py-3 font-medium">
+                            {t("documents.table.status")}
+                          </th>
+                          <th className="px-4 py-3 font-medium">
+                            {t("documents.table.tokens")}
+                          </th>
+                          <th className="px-4 py-3 font-medium text-right">
+                            {t("documents.table.actions")}
+                          </th>
                         </tr>
-                      ) : null}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 px-8 py-16 text-center text-sm text-muted-foreground">
-            {t("detail.placeholderDescription")}
-          </div>
-        )}
-      </div>
-    </ScrollArea>
+                      </thead>
+                      <tbody>
+                        {documents.map((document) => (
+                          <tr
+                            key={document.id}
+                            className="border-t border-border/40 text-sm"
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  defaultValue={document.fileName}
+                                  onBlur={(event) =>
+                                    handleRenameDocument(
+                                      document,
+                                      event.currentTarget.value.trim(),
+                                    )
+                                  }
+                                  className="max-w-sm"
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {formatBytes(document.fileSize)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge
+                                variant={
+                                  STATUS_VARIANT[document.status] ?? "secondary"
+                                }
+                              >
+                                {t(`status.${document.status}`)}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {document.embeddingTokens}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleDeleteDocument(document)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">
+                                  {t("actions.deleteDocument")}
+                                </span>
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                        {!documents.length ? (
+                          <tr>
+                            <td
+                              colSpan={5}
+                              className="px-4 py-10 text-center text-sm text-muted-foreground"
+                            >
+                              {t("documents.empty")}
+                            </td>
+                          </tr>
+                        ) : null}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 px-8 py-16 text-center text-sm text-muted-foreground">
+              {t("detail.placeholderDescription")}
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </>
   );
 }
