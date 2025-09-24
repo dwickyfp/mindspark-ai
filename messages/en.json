@@ -587,7 +587,9 @@
     "list": {
       "heading": "Your Knowledge Bases",
       "noDescription": "No description provided",
-      "empty": "You haven't created any knowledge bases yet."
+      "empty": "You haven't created any knowledge bases yet.",
+      "searchPlaceholder": "Search knowledge bases",
+      "noResults": "No knowledge bases match \"{query}\"."
     },
     "detail": {
       "placeholderTitle": "Select a knowledge base",

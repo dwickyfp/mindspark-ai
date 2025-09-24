@@ -353,7 +353,9 @@
     "list": {
       "heading": "您的知识库",
       "noDescription": "未提供描述",
-      "empty": "您尚未创建任何知识库。"
+      "empty": "您尚未创建任何知识库。",
+      "searchPlaceholder": "搜索知识库",
+      "noResults": "没有与 \"{query}\" 匹配的知识库。"
     },
     "detail": {
       "placeholderTitle": "选择知识库",

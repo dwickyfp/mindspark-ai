@@ -465,7 +465,9 @@
     "list": {
       "heading": "ナレッジベース一覧",
       "noDescription": "説明はありません",
-      "empty": "まだナレッジベースが作成されていません。"
+      "empty": "まだナレッジベースが作成されていません。",
+      "searchPlaceholder": "ナレッジベースを検索",
+      "noResults": "\"{query}\" に一致するナレッジベースは見つかりませんでした。"
     },
     "detail": {
       "placeholderTitle": "ナレッジベースを選択",

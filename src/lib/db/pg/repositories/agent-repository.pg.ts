@@ -18,7 +18,8 @@ import {
 import { and, asc, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { generateUUID } from "lib/utils";
 
-type PgClient = typeof db;
+type PgTransactionClient = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type PgClient = typeof db | PgTransactionClient;
 
 async function ensureAccessibleKnowledgeBases(
   client: PgClient,

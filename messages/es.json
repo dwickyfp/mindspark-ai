@@ -465,7 +465,9 @@
     "list": {
       "heading": "Tus bases de conocimiento",
       "noDescription": "Sin descripción",
-      "empty": "Aún no has creado bases de conocimiento."
+      "empty": "Aún no has creado bases de conocimiento.",
+      "searchPlaceholder": "Buscar bases de conocimiento",
+      "noResults": "No se encontraron bases de conocimiento para \"{query}\"."
     },
     "detail": {
       "placeholderTitle": "Selecciona una base",

@@ -350,7 +350,9 @@
     "list": {
       "heading": "지식 베이스 목록",
       "noDescription": "설명이 없습니다",
-      "empty": "아직 지식 베이스를 생성하지 않았습니다."
+      "empty": "아직 지식 베이스를 생성하지 않았습니다.",
+      "searchPlaceholder": "지식 베이스 검색",
+      "noResults": "\"{query}\"에 해당하는 지식 베이스가 없습니다."
     },
     "detail": {
       "placeholderTitle": "지식 베이스 선택",
