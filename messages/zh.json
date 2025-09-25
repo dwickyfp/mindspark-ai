@@ -18,6 +18,7 @@
     "approve": "批准",
     "reject": "拒绝",
     "saving": "保存中...",
+    "loading": "加载中...",
     "optional": "可选",
     "deleting": "删除中...",
     "run": "运行",
@@ -164,7 +165,22 @@
       "failedToUpdateThread": "更新线程失败",
       "titleRequired": "标题是必需的",
       "threadUpdated": "线程已更新",
-      "areYouSureYouWantToDeleteThisChatThread": "您确定要删除此聊天线程吗？"
+      "areYouSureYouWantToDeleteThisChatThread": "您确定要删除此聊天线程吗？",
+      "addKnowledge": "添加知识",
+      "addKnowledgeTitle": "添加到知识库",
+      "addKnowledgeDescription": "将此次对话总结并以 Markdown 形式保存到所选知识库。",
+      "addKnowledgeSelectLabel": "知识库",
+      "addKnowledgeSelectPlaceholder": "选择一个知识库",
+      "addKnowledgeHint": "AI 会生成摘要，并将对话内容以 Markdown 文档上传。",
+      "addKnowledgeEmptyTitle": "暂无知识库",
+      "addKnowledgeEmptySubtitle": "请先创建一个知识库，然后再回来添加此对话。",
+      "addKnowledgeEmptyCta": "打开知识库",
+      "addKnowledgeProcessing": "正在总结并索引此聊天，请稍候。",
+      "addKnowledgeProcessingShort": "处理中...",
+      "addKnowledgeConfirm": "添加到知识库",
+      "addKnowledgeSuccess": "聊天已添加到知识库",
+      "addKnowledgeError": "无法将聊天添加到知识库",
+      "addKnowledgeSelectKnowledgeBase": "请选择一个知识库以继续"
     },
 
     "ChatPreferences": {
