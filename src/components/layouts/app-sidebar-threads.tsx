@@ -108,14 +108,21 @@ export function AppSidebarThreads() {
       return [];
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const toDateKey = (date: Date) =>
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(date);
 
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const lastWeek = new Date(today);
-    lastWeek.setDate(lastWeek.getDate() - 7);
+    const now = new Date();
+    const todayKey = toDateKey(now);
+    const yesterdayKey = toDateKey(
+      new Date(now.getTime() - 24 * 60 * 60 * 1000),
+    );
+    const lastWeekThreshold = now.getTime() - 7 * 24 * 60 * 60 * 1000;
 
     const groups: ThreadGroup[] = [
       { label: t("today"), threads: [] },
@@ -125,17 +132,16 @@ export function AppSidebarThreads() {
     ];
 
     displayThreadList.forEach((thread) => {
-      const threadDate =
-        (thread.lastMessageAt
-          ? new Date(thread.lastMessageAt)
-          : new Date(thread.createdAt)) || new Date();
-      threadDate.setHours(0, 0, 0, 0);
+      const threadDate = thread.lastMessageAt
+        ? new Date(thread.lastMessageAt)
+        : new Date(thread.createdAt);
+      const threadKey = toDateKey(threadDate);
 
-      if (threadDate.getTime() === today.getTime()) {
+      if (threadKey === todayKey) {
         groups[0].threads.push(thread);
-      } else if (threadDate.getTime() === yesterday.getTime()) {
+      } else if (threadKey === yesterdayKey) {
         groups[1].threads.push(thread);
-      } else if (threadDate.getTime() >= lastWeek.getTime()) {
+      } else if (threadDate.getTime() >= lastWeekThreshold) {
         groups[2].threads.push(thread);
       } else {
         groups[3].threads.push(thread);
