@@ -457,15 +457,21 @@
       "newKnowledgeBase": "Nueva base de conocimiento",
       "refresh": "Actualizar",
       "uploadDocument": "Subir documento",
+      "importFromUrl": "Importar desde URL",
       "deleteKnowledgeBase": "Eliminar base",
       "deleteDocument": "Eliminar",
       "cancel": "Cancelar",
-      "create": "Crear"
+      "create": "Crear",
+      "import": "Importar",
+      "uploading": "Subiendo...",
+      "importing": "Importando..."
     },
     "list": {
       "heading": "Tus bases de conocimiento",
       "noDescription": "Sin descripción",
-      "empty": "Aún no has creado bases de conocimiento."
+      "empty": "Aún no has creado bases de conocimiento.",
+      "searchPlaceholder": "Buscar bases de conocimiento",
+      "noResults": "No se encontraron bases de conocimiento para \"{query}\"."
     },
     "detail": {
       "placeholderTitle": "Selecciona una base",
@@ -489,13 +495,25 @@
         "tokens": "Tokens de embedding",
         "actions": "Acciones"
       },
-      "empty": "No hay documentos cargados."
+      "empty": "No hay documentos cargados.",
+      "upload": {
+        "title": "Subir desde tu equipo",
+        "description": "Arrastra archivos o selecciona PDF, DOCX o TXT.",
+        "note": "Tamaño máximo de archivo: 25 MB."
+      },
+      "import": {
+        "title": "Importar desde un sitio web",
+        "description": "Usamos Exa para rastrear la página y añadir el texto como documento.",
+        "note": "Compatible con URLs públicas; puede fallar en páginas privadas."
+      }
     },
     "form": {
       "name": "Nombre",
       "description": "Descripción",
       "visibility": "Visibilidad",
-      "namePlaceholder": "Base de conocimiento"
+      "namePlaceholder": "Base de conocimiento",
+      "url": "URL",
+      "urlPlaceholder": "https://ejemplo.com/docs"
     },
     "visibility": {
       "private": "Privado",
@@ -505,7 +523,9 @@
     "dialog": {
       "createTitle": "Crear base de conocimiento",
       "createDescription": "Asigna un nombre y opcionalmente una descripción.",
-      "deleteTitle": "Eliminar base de conocimiento"
+      "deleteTitle": "Eliminar base de conocimiento",
+      "importFromUrlTitle": "Agregar contenido del sitio web",
+      "importFromUrlDescription": "Usa Exa para rastrear una URL y agregar su texto como documento."
     },
     "messages": {
       "created": "Base creada",
@@ -513,7 +533,8 @@
       "deleted": "Base eliminada",
       "documentUploaded": "{file} subido",
       "documentDeleted": "Documento eliminado",
-      "documentRenamed": "Documento renombrado"
+      "documentRenamed": "Documento renombrado",
+      "importQueued": "La importación del sitio web se ha encolado."
     },
     "confirm": {
       "deleteKnowledgeBase": "¿Eliminar esta base de conocimiento y todos sus documentos?",

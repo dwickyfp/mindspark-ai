@@ -462,7 +462,7 @@ export default function PromptInput({
                       <PlusIcon />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>
+                  <TooltipContent className="max-w-[250px] whitespace-normal">
                     {attachmentsT("tooltip", {
                       types: SUPPORTED_FILE_TYPE_SUMMARY,
                       limit: formatFileSize(MAX_FILE_SIZE_BYTES),

@@ -85,7 +85,7 @@ export const pgUsageLogRepository: UsageLogRepository = {
       });
   },
 
-  async logEmbeddingUsage(log) {
+  async logEmbeddingUsage(log: EmbeddingUsageLogInsert) {
     await db.insert(EmbeddingUsageLogSchema).values({
       userId: log.userId,
       organizationId: log.organizationId ?? null,
@@ -203,7 +203,7 @@ export const pgUsageLogRepository: UsageLogRepository = {
           organizationName: row.organizationName ?? null,
           tokens: Number(row.tokens ?? 0),
         })),
-    };
+    } satisfies AgentEmbeddingUsageSummary;
   },
 
   async getToolUsageAggregatesForUsers(userIds: string[]) {

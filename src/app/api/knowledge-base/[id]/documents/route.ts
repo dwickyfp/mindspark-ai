@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 import { getSession } from "auth/server";
 import { knowledgeBaseRepository } from "lib/db/repository";

@@ -30,8 +30,10 @@ export function chunkText(text: string, options: ChunkOptions = {}): string[] {
   const { maxTokens, overlapTokens } = { ...DEFAULT_OPTIONS, ...options };
   const encoding = getEncoding();
 
-  const decodeTokens = (tokens: number[]): string => {
-    const decoded = encoding.decode(tokens);
+  const decodeTokens = (tokens: Uint32Array | number[]): string => {
+    const array =
+      tokens instanceof Uint32Array ? tokens : Uint32Array.from(tokens);
+    const decoded = encoding.decode(array);
     if (typeof decoded === "string") {
       return decoded;
     }

@@ -457,15 +457,21 @@
       "newKnowledgeBase": "ナレッジベースを作成",
       "refresh": "更新",
       "uploadDocument": "ドキュメントをアップロード",
+      "importFromUrl": "URL から取り込む",
       "deleteKnowledgeBase": "ナレッジベースを削除",
       "deleteDocument": "削除",
       "cancel": "キャンセル",
-      "create": "作成"
+      "create": "作成",
+      "import": "取り込む",
+      "uploading": "アップロード中...",
+      "importing": "取り込み中..."
     },
     "list": {
       "heading": "ナレッジベース一覧",
       "noDescription": "説明はありません",
-      "empty": "まだナレッジベースが作成されていません。"
+      "empty": "まだナレッジベースが作成されていません。",
+      "searchPlaceholder": "ナレッジベースを検索",
+      "noResults": "\"{query}\" に一致するナレッジベースは見つかりませんでした。"
     },
     "detail": {
       "placeholderTitle": "ナレッジベースを選択",
@@ -489,13 +495,25 @@
         "tokens": "埋め込みトークン",
         "actions": "操作"
       },
-      "empty": "ドキュメントがまだアップロードされていません。"
+      "empty": "ドキュメントがまだアップロードされていません。",
+      "upload": {
+        "title": "デバイスからアップロード",
+        "description": "PDF、DOCX、TXT ファイルをドラッグ＆ドロップするか選択してください。",
+        "note": "最大ファイルサイズは 25 MB です。"
+      },
+      "import": {
+        "title": "ウェブサイトから取り込む",
+        "description": "Exa でページをクロールし、抽出したテキストをドキュメントとして追加します。",
+        "note": "公開 URL に対応。認証が必要なページでは取り込めない場合があります。"
+      }
     },
     "form": {
       "name": "名前",
       "description": "説明",
       "visibility": "公開範囲",
-      "namePlaceholder": "Acme ナレッジベース"
+      "namePlaceholder": "Acme ナレッジベース",
+      "url": "URL",
+      "urlPlaceholder": "https://example.com/docs"
     },
     "visibility": {
       "private": "非公開",
@@ -505,7 +523,9 @@
     "dialog": {
       "createTitle": "ナレッジベースを作成",
       "createDescription": "ナレッジベースの名前と任意の説明を入力してください。",
-      "deleteTitle": "ナレッジベースを削除"
+      "deleteTitle": "ナレッジベースを削除",
+      "importFromUrlTitle": "ウェブサイトのコンテンツを追加",
+      "importFromUrlDescription": "Exa を使用して URL をクロールし、テキストをドキュメントとして追加します。"
     },
     "messages": {
       "created": "ナレッジベースを作成しました",
@@ -513,7 +533,8 @@
       "deleted": "ナレッジベースを削除しました",
       "documentUploaded": "{file} をアップロードしました",
       "documentDeleted": "ドキュメントを削除しました",
-      "documentRenamed": "ドキュメント名を変更しました"
+      "documentRenamed": "ドキュメント名を変更しました",
+      "importQueued": "ウェブサイトの取り込みをキューに追加しました。"
     },
     "confirm": {
       "deleteKnowledgeBase": "このナレッジベースと関連ドキュメントをすべて削除しますか？",

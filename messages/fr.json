@@ -601,15 +601,21 @@
       "newKnowledgeBase": "Nouvelle Base de Connaissances",
       "refresh": "Actualiser",
       "uploadDocument": "Télécharger un Document",
+      "importFromUrl": "Importer depuis une URL",
       "deleteKnowledgeBase": "Supprimer la Base de Connaissances",
       "deleteDocument": "Supprimer",
       "cancel": "Annuler",
-      "create": "Créer"
+      "create": "Créer",
+      "import": "Importer",
+      "uploading": "Téléchargement...",
+      "importing": "Importation..."
     },
     "list": {
       "heading": "Vos Bases de Connaissances",
       "noDescription": "Aucune description fournie",
-      "empty": "Vous n'avez pas encore créé de bases de connaissances."
+      "empty": "Vous n'avez pas encore créé de bases de connaissances.",
+      "searchPlaceholder": "Rechercher des bases de connaissances",
+      "noResults": "Aucune base de connaissances ne correspond à \"{query}\"."
     },
     "detail": {
       "placeholderTitle": "Sélectionnez une base de connaissances",
@@ -633,13 +639,25 @@
         "tokens": "Jetons d'Intégration",
         "actions": "Actions"
       },
-      "empty": "Aucun document téléchargé pour le moment."
+      "empty": "Aucun document téléchargé pour le moment.",
+      "upload": {
+        "title": "Téléverser depuis votre appareil",
+        "description": "Glissez-déposez des fichiers ou sélectionnez des PDF, DOCX ou TXT.",
+        "note": "Taille maximale du fichier : 25 Mo."
+      },
+      "import": {
+        "title": "Importer depuis un site web",
+        "description": "Nous explorons la page avec Exa et ajoutons le texte extrait comme document.",
+        "note": "Compatible avec les URL publiques; les pages privées peuvent échouer."
+      }
     },
     "form": {
       "name": "Nom",
       "description": "Description",
       "visibility": "Visibilité",
-      "namePlaceholder": "Base de connaissances Acme"
+      "namePlaceholder": "Base de connaissances Acme",
+      "url": "URL",
+      "urlPlaceholder": "https://exemple.com/docs"
     },
     "visibility": {
       "private": "Privé",
@@ -649,7 +667,9 @@
     "dialog": {
       "createTitle": "Créer une base de connaissances",
       "createDescription": "Donnez un nom à votre base de connaissances et une description optionnelle.",
-      "deleteTitle": "Supprimer la base de connaissances"
+      "deleteTitle": "Supprimer la base de connaissances",
+      "importFromUrlTitle": "Ajouter du contenu de site web",
+      "importFromUrlDescription": "Utilisez Exa pour explorer une URL et ajouter son texte en tant que document."
     },
     "messages": {
       "created": "Base de connaissances créée",
@@ -657,7 +677,8 @@
       "deleted": "Base de connaissances supprimée",
       "documentUploaded": "{file} téléchargé",
       "documentDeleted": "Document supprimé",
-      "documentRenamed": "Document renommé"
+      "documentRenamed": "Document renommé",
+      "importQueued": "Importation du site web en file d'attente"
     },
     "confirm": {
       "deleteKnowledgeBase": "Supprimer cette base de connaissances et tous les documents associés ?",
