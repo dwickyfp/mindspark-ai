@@ -18,6 +18,7 @@
     "approve": "Approuver",
     "reject": "Rejeter",
     "saving": "Enregistrement...",
+    "loading": "Chargement...",
     "optional": "Facultatif",
     "deleting": "Suppression...",
     "run": "Exécuter",
@@ -163,7 +164,22 @@
       "failedToUpdateThread": "Échec de mise à jour du fil",
       "titleRequired": "Le titre est requis",
       "threadUpdated": "Fil mis à jour",
-      "areYouSureYouWantToDeleteThisChatThread": "Êtes-vous sûr de vouloir supprimer ce fil de chat ?"
+      "areYouSureYouWantToDeleteThisChatThread": "Êtes-vous sûr de vouloir supprimer ce fil de chat ?",
+      "addKnowledge": "Ajouter au savoir",
+      "addKnowledgeTitle": "Ajouter à la base de connaissances",
+      "addKnowledgeDescription": "Résumez cette conversation et enregistrez-la en markdown dans la base de connaissances sélectionnée.",
+      "addKnowledgeSelectLabel": "Base de connaissances",
+      "addKnowledgeSelectPlaceholder": "Choisissez une base de connaissances",
+      "addKnowledgeHint": "L'IA générera un résumé et téléversera la transcription de la conversation en document markdown.",
+      "addKnowledgeEmptyTitle": "Aucune base de connaissances",
+      "addKnowledgeEmptySubtitle": "Créez d'abord une base de connaissances, puis revenez pour ajouter cette conversation.",
+      "addKnowledgeEmptyCta": "Ouvrir les bases de connaissances",
+      "addKnowledgeProcessing": "Résumé et indexation du chat en cours. Cela peut prendre un instant.",
+      "addKnowledgeProcessingShort": "Traitement...",
+      "addKnowledgeConfirm": "Ajouter à la base de connaissances",
+      "addKnowledgeSuccess": "Chat ajouté à la base de connaissances",
+      "addKnowledgeError": "Échec de l'ajout du chat à la base de connaissances",
+      "addKnowledgeSelectKnowledgeBase": "Sélectionnez une base de connaissances pour continuer"
     },
 
     "ChatPreferences": {
